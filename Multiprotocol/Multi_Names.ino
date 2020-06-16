@@ -84,6 +84,7 @@ const char STR_TIGER[]		="Tiger";
 const char STR_XK[]			="XK";
 const char STR_XN297DUMP[]	="XN297DP";
 const char STR_FRSKYR9[]	="FrSkyR9";
+const char STR_ELRS[]	    ="ELRS";
 const char STR_PROPEL[]		="Propel";
 const char STR_SKYARTEC[]	="Skyartc";
 const char STR_TEST[]		="Test";
@@ -130,6 +131,7 @@ const char STR_SUBTYPE_ESKY150V2[] =  "\x05""150V2";
 const char STR_SUBTYPE_V911S[] =      "\x05""V911S""E119\0";
 const char STR_SUBTYPE_XK[] =         "\x04""X450""X420";
 const char STR_SUBTYPE_FRSKYR9[] =    "\x07""915MHz\0""868MHz\0""915 8ch""868 8ch";
+const char STR_SUBTYPE_ELRS[] =       "\x07""915 AU\0""915 FCC\0""868 EU";
 const char STR_SUBTYPE_ESKY[] =       "\x03""Std""ET4";
 const char STR_SUBTYPE_PROPEL[] =     "\x04""74-Z";
 const char STR_SUBTYPE_FRSKY_RX[] =   "\x07""RX\0    ""CloneTX";
@@ -245,6 +247,9 @@ const mm_protocol_definition multi_protocols[] = {
 	#endif
 	#if defined(FRSKYR9_SX1276_INO)
 		{PROTO_FRSKY_R9,   STR_FRSKYR9,   4, STR_SUBTYPE_FRSKYR9,   OPTION_NONE    },
+	#endif
+	#if defined(ELRS_SX1276_INO)
+		{PROTO_ELRS,       STR_ELRS,      3, STR_SUBTYPE_ELRS,      OPTION_NONE    },
 	#endif
 	#if defined(FX816_NRF24L01_INO)
 		{PROTO_FX816,      STR_FX816,     1, STR_SUBTYPE_FX816,     OPTION_NONE    },

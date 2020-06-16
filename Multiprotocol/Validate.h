@@ -285,6 +285,7 @@
 #endif
 #ifndef SX1276_INSTALLED
 	#undef FRSKYR9_SX1276_INO
+	#undef ELRS_SX1276_INO
 #endif
 
 //OpenTX 2.3.x issue

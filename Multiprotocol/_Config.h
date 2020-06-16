@@ -78,7 +78,7 @@
 #define CYRF6936_INSTALLED
 #define CC2500_INSTALLED
 #define NRF24L01_INSTALLED
-//#define SX1276_INSTALLED		// only supported on STM32 modules
+#define SX1276_INSTALLED		// only supported on STM32 modules
 
 //Uncomment (remove //) if you have an internal 5-in-1 Multi module.
 //All components are considered to be installed and specifics to that module are automatically configured 
@@ -240,6 +240,7 @@
 
 //The protocols below need a SX1276 to be installed
 #define FRSKYR9_SX1276_INO
+#define ELRS_SX1276_INO
 
 /***************************/
 /*** PROTOCOLS SETTINGS  ***/
