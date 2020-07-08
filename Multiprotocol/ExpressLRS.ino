@@ -1,7 +1,11 @@
-#if defined(EXPRESSLRS_SX1276_INO)
+#if defined(ELRS_SX1276_INO)
 #include "iface_sx1276.h"
-#include "ExpressLRS_common.h"
-#include "ExpressLRS_FHSS.h"
+#include "ExpressLRS.h"
+#include "ExpressLRS_OTA.h"
+
+uint8_t UID[6] = {180, 230, 45, 152, 126, 65}; //sandro unique ID
+uint8_t CRCCaesarCipher = UID[4];
+uint8_t DeviceAddr = 0b111111 & UID[5];
 
 uint8_t ExpressLRS_TXdataBuffer[8] = {0};
 uint8_t ExpressLRS_NonceTX = 0;
@@ -11,112 +15,34 @@ uint16_t initExpressLRS()
   SX1276_Reset();
   if (!SX1276_DetectChip())
   {
-    return;
+    return 0;
   }
-}
+  ExpressLRS_FHSSrandomiseFHSSsequence();
 
-void ExpressLRS_SetRFLinkRate(expresslrs_RFrates_e rate) // Set speed of RF link (hz)
-{
-  expresslrs_mod_settings_s *const ModParams = get_elrs_airRateConfig(rate);
-  expresslrs_rf_pref_params_s *const RFperf = get_elrs_RFperfParams(rate);
+  debug("Setting ExpressLRS LoRa reg defaults");
+  SX1276_WriteReg(SX1276_01_OPMODE, SX1276_OPMODE_SLEEP);
+  SX1276_SetMode(true, false, SX1276_OPMODE_STDBY); //must be written in sleep mode
 
-  Radio.Config(ModParams->bw, ModParams->sf, ModParams->cr, ModParams->PreambleLen);
-  hwTimer.updateInterval(ModParams->interval);
+  SX1276_WriteReg(SX1276_22_PAYLOAD_LENGTH, 8);
+  SX1276_WriteReg(SX1276_0E_FIFOTXBASEADDR, 0x00);
+  //SX1276_WriteReg(SX1276_0E_FIFORXBASEADDR, 0x00);
 
-  ExpressLRS_currAirRate_Modparams = ModParams;
-  ExpressLRS_currAirRate_RFperfParams = RFperf;
 
-  crsf.RequestedRCpacketInterval = ModParams->interval;
-  isRXconnected = false;
-}
 
-void ExpressLRS_GenerateSyncPacketData()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + ELRS_SYNC_PACKET;
-  ExpressLRS_TXdataBuffer[0] = PacketHeaderAddr;
-  ExpressLRS_TXdataBuffer[1] = FHSSgetCurrIndex();
-  ExpressLRS_TXdataBuffer[2] = NonceTX;
-  ExpressLRS_TXdataBuffer[3] = ((ExpressLRS_currAirRate_Modparams->enum_rate & 0b111) << 5) + ((ExpressLRS_currAirRate_Modparams->TLMinterval & 0b111) << 2);
-  ExpressLRS_TXdataBuffer[4] = UID[3];
-  ExpressLRS_TXdataBuffer[5] = UID[4];
-  ExpressLRS_TXdataBuffer[6] = UID[5];
-}
 
-void ExpressLRS_Generate4ChannelData_11bit()
-{
-  uint8_t PacketHeaderAddr;
-  PacketHeaderAddr = (DeviceAddr << 2) + ELRS_RC_DATA_PACKET;
-  ExpressLRS_TXdataBuffer[0] = PacketHeaderAddr;
-  ExpressLRS_TXdataBuffer[1] = ((crsf.ChannelDataIn[0]) >> 3);
-  ExpressLRS_TXdataBuffer[2] = ((crsf.ChannelDataIn[1]) >> 3);
-  ExpressLRS_TXdataBuffer[3] = ((crsf.ChannelDataIn[2]) >> 3);
-  ExpressLRS_TXdataBuffer[4] = ((crsf.ChannelDataIn[3]) >> 3);
-  ExpressLRS_TXdataBuffer[5] = ((crsf.ChannelDataIn[0] & 0b00000111) << 5) +
-                               ((crsf.ChannelDataIn[1] & 0b111) << 2) +
-                               ((crsf.ChannelDataIn[2] & 0b110) >> 1);
-  ExpressLRS_TXdataBuffer[6] = ((crsf.ChannelDataIn[2] & 0b001) << 7) +
-                               ((crsf.ChannelDataIn[3] & 0b111) << 4); // 4 bits left over for something else?
-#ifdef One_Bit_Switches
-  ExpressLRS_TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[4]) << 3;
-  ExpressLRS_TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[5]) << 2;
-  ExpressLRS_TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[6]) << 1;
-  ExpressLRS_TXdataBuffer[6] += CRSF_to_BIT(crsf.ChannelDataIn[7]) << 0;
-#endif
-}
-
-void ExpressLRS_SendRCdataToRF()
-{
-#ifdef FEATURE_OPENTX_SYNC
-  //JustSentRFpacket(); // tells the radio that we want to send data now - this allows opentx packet syncing
-#endif
-
-  uint32_t SyncInterval;
-  SyncInterval = ExpressLRS_currAirRate_RFperfParams->SyncPktIntervalDisconnected;
-
-  if (((millis() > (SyncPacketLastSent + SyncInterval)) && (Radio.currFreq == GetInitialFreq()))) //only send sync when its time and only on channel 0;
-  {
-
-    GenerateSyncPacketData();
-    SyncPacketLastSent = millis();
-    ChangeAirRateSentUpdate = true;
-    //Serial.println("sync");
-    //Serial.println(Radio.currFreq);
-  }
-  else
-  {
-    if ((millis() > (MSP_PACKET_SEND_INTERVAL + MSPPacketLastSent)) && MSPPacketSendCount)
-    {
-      GenerateMSPData();
-      MSPPacketLastSent = millis();
-      MSPPacketSendCount--;
-    }
-    else
-    {
-#if defined HYBRID_SWITCHES_8
-      GenerateChannelDataHybridSwitch8(&Radio, &crsf, DeviceAddr);
-#elif defined SEQ_SWITCHES
-      GenerateChannelDataSeqSwitch(&Radio, &crsf, DeviceAddr);
-#else
-      Generate4ChannelData_11bit();
-#endif
-    }
-  }
-
-  ///// Next, Calculate the CRC and put it into the buffer /////
-  uint8_t crc = CalcCRC(Radio.TXdataBuffer, 7) + CRCCaesarCipher;
-  Radio.TXdataBuffer[7] = crc;
-  Radio.TXnb(Radio.TXdataBuffer, 8);
-
-  if (ChangeAirRateRequested)
-  {
-    ChangeAirRateSentUpdate = true;
-  }
+  //SetSyncWord(currSyncWord);
+  //hal.setRegValue(SX127X_REG_DIO_MAPPING_1, 0b11000000, 7, 6); //undocumented "hack", looking at Table 18 from datasheet SX127X_REG_DIO_MAPPING_1 = 11 appears to be unspported by infact it generates an intterupt on both RXdone and TXdone, this saves switching modes.
+  //hal.writeRegister(SX127X_REG_LNA, SX127X_LNA_BOOST_ON);
+  //hal.writeRegister(SX1278_REG_MODEM_CONFIG_3, SX1278_AGC_AUTO_ON | SX1278_LOW_DATA_RATE_OPT_OFF);
+  //hal.setRegValue(SX127X_REG_OCP, SX127X_OCP_ON | SX127X_OCP_150MA, 5, 0); //150ma max current
+  //SetPreambleLength(SX127X_PREAMBLE_LENGTH_LSB);
 }
 
 uint16_t ExpressLRS_callback()
 {
   debug("callback");
+  ExpressLRS_SendRCdataToRF();
+  ExpressLRS_NonceTX++;
   return 5000;
 }
 
