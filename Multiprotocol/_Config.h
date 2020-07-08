@@ -82,7 +82,7 @@
 
 //Uncomment (remove //) if you have an internal 5-in-1 Multi module.
 //All components are considered to be installed and specifics to that module are automatically configured 
-//#define MULTI_5IN1_INTERNAL
+#define MULTI_5IN1_INTERNAL
 
 /** OrangeRX TX **/
 //If you compile for the OrangeRX TX module you need to select the correct board type.
@@ -197,46 +197,46 @@
 #define	REDPINE_CC2500_INO
 
 //The protocols below need a NRF24L01 to be installed
-#define	ASSAN_NRF24L01_INO
-#define	BAYANG_NRF24L01_INO
-#define	BAYANG_RX_NRF24L01_INO
-#define	BUGSMINI_NRF24L01_INO
-#define	CABELL_NRF24L01_INO
-#define	CFLIE_NRF24L01_INO
-#define	CG023_NRF24L01_INO
-#define	CX10_NRF24L01_INO		 //Include Q2X2 protocol
-#define	DM002_NRF24L01_INO
-#define	E01X_NRF24L01_INO
-#define	ESKY_NRF24L01_INO
-#define	ESKY150_NRF24L01_INO
-#define	FQ777_NRF24L01_INO
-#define	FX816_NRF24L01_INO
-#define	FY326_NRF24L01_INO
-#define	GD00X_NRF24L01_INO
-#define	GW008_NRF24L01_INO
-#define	HISKY_NRF24L01_INO
-#define	HONTAI_NRF24L01_INO
-#define	H8_3D_NRF24L01_INO
-#define JJRC345_NRF24L01_INO
-#define	KF606_NRF24L01_INO
-#define	KN_NRF24L01_INO
-#define	MJXQ_NRF24L01_INO
-#define	MT99XX_NRF24L01_INO
-#define	NCC1701_NRF24L01_INO
-#define	POTENSIC_NRF24L01_INO
-#define	PROPEL_NRF24L01_INO
-#define	Q303_NRF24L01_INO
-#define	Q90C_NRF24L01_INO
-#define	SHENQI_NRF24L01_INO
-#define	SLT_NRF24L01_INO
-#define	SYMAX_NRF24L01_INO
-#define	TIGER_NRF24L01_INO
-#define	V2X2_NRF24L01_INO
-#define	V761_NRF24L01_INO
-#define	V911S_NRF24L01_INO
-#define	XK_NRF24L01_INO
-#define	YD717_NRF24L01_INO
-#define	ZSX_NRF24L01_INO
+//#define	ASSAN_NRF24L01_INO
+//#define	BAYANG_NRF24L01_INO
+//#define	BAYANG_RX_NRF24L01_INO
+//#define	BUGSMINI_NRF24L01_INO
+//#define	CABELL_NRF24L01_INO
+//#define	CFLIE_NRF24L01_INO
+//#define	CG023_NRF24L01_INO
+//#define	CX10_NRF24L01_INO		 //Include Q2X2 protocol
+//#define	DM002_NRF24L01_INO
+//#define	E01X_NRF24L01_INO
+//#define	ESKY_NRF24L01_INO
+//#define	ESKY150_NRF24L01_INO
+//#define	FQ777_NRF24L01_INO
+//#define	FX816_NRF24L01_INO
+//#define	FY326_NRF24L01_INO
+//#define	GD00X_NRF24L01_INO
+//#define	GW008_NRF24L01_INO
+//#define	HISKY_NRF24L01_INO
+//#define	HONTAI_NRF24L01_INO
+//#define	H8_3D_NRF24L01_INO
+//#define JJRC345_NRF24L01_INO
+//#define	KF606_NRF24L01_INO
+//#define	KN_NRF24L01_INO
+//#define	MJXQ_NRF24L01_INO
+//#define	MT99XX_NRF24L01_INO
+//#define	NCC1701_NRF24L01_INO
+//#define	POTENSIC_NRF24L01_INO
+//#define	PROPEL_NRF24L01_INO
+//#define	Q303_NRF24L01_INO
+//#define	Q90C_NRF24L01_INO
+//#define	SHENQI_NRF24L01_INO
+//#define	SLT_NRF24L01_INO
+//#define	SYMAX_NRF24L01_INO
+//#define	TIGER_NRF24L01_INO
+//#define	V2X2_NRF24L01_INO
+//#define	V761_NRF24L01_INO
+//#define	V911S_NRF24L01_INO
+//#define	XK_NRF24L01_INO
+//#define	YD717_NRF24L01_INO
+//#define	ZSX_NRF24L01_INO
 
 //The protocols below need a SX1276 to be installed
 #define FRSKYR9_SX1276_INO
