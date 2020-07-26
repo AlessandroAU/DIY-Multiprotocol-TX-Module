@@ -13,11 +13,12 @@ extern uint8_t DeviceAddr;
 extern uint8_t ExpressLRS_TXdataBuffer[8];
 extern uint8_t ExpressLRS_NonceTX;
 
-
 #define ELRS_RC_DATA_PACKET 0b00
 #define ELRS_MSP_DATA_PACKET 0b01
 #define ELRS_TLM_PACKET 0b11
 #define ELRS_SYNC_PACKET 0b10
+
+void expresslrs_fhss_generate_sequence();
 
 typedef enum
 {
@@ -44,8 +45,6 @@ typedef enum
     RATE_200HZ = 0,
     RATE_100HZ = 1,
     RATE_50HZ = 2,
-    RATE_25HZ = 3,
-    RATE_4HZ = 4
 } expresslrs_RFrates_e; // Max value of 16 since only 4 bits have been assigned in the sync package.
 
 #define RATE_MAX 3
@@ -80,9 +79,9 @@ expresslrs_mod_settings_s *ExpressLRS_currAirRate_Modparams;
 expresslrs_rf_pref_params_s *ExpressLRS_currAirRate_RFperfParams;
 
 expresslrs_mod_settings_s ExpressLRS_AirRateConfig[RATE_MAX] = {
-    {RATE_200HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 6, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 5000, 200, TLM_RATIO_1_64, 2, 8},
-    {RATE_100HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 7, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 10000, 100, TLM_RATIO_1_64, 2, 8},
-    {RATE_50HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 8, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 20000, 50, TLM_RATIO_NO_TLM, 2, 8}}; // for model recovery
+    {RATE_200HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 6, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 5000, 200, TLM_RATIO_NO_TLM, 2, 8},
+    {RATE_100HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 7, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 10000, 100, TLM_RATIO_NO_TLM, 2, 8},
+    {RATE_50HZ, SX1276_MODEM_CONFIG1_BW_500KHZ, 8, SX1276_MODEM_CONFIG1_CODING_RATE_4_7, 20000, 50, TLM_RATIO_NO_TLM, 2, 8}};
 
 expresslrs_rf_pref_params_s ExpressLRS_AirRateRFperf[RATE_MAX] = {
     {RATE_200HZ, -112, 4380, 2500, 2000, 2000, 5000}, // ~ 3 sync packets
@@ -118,7 +117,7 @@ expresslrs_rf_pref_params_s *get_elrs_RFperfParams(expresslrs_RFrates_e rate)
 
 connectionState_e connectionState = disconnected;
 
-uint8_t TLMratioEnumToValue(expresslrs_tlm_ratio_e enumval)
+uint8_t expresslrs_tlmratio_enum_to_val(expresslrs_tlm_ratio_e enumval)
 {
     switch (enumval)
     {
@@ -158,7 +157,7 @@ unsigned long ExpressLRS_seed = 0;
 // returns values between 0 and 0x7FFF
 // NB rngN depends on this output range, so if we change the
 // behaviour rngN will need updating
-int32_t ExpressLRS_rng(void)
+int32_t expresslrs_rng(void)
 {
     long m = 2147483648;
     long a = 214013;
@@ -167,7 +166,7 @@ int32_t ExpressLRS_rng(void)
     return ExpressLRS_seed >> 16;
 }
 
-void ExpressLRS_rngSeed(long newSeed)
+void expresslrs_rngSeed(long newSeed)
 {
     ExpressLRS_seed = newSeed;
 }
@@ -175,75 +174,81 @@ void ExpressLRS_rngSeed(long newSeed)
 // returns 0 <= x < max where max <= 256
 // (actual upper limit is higher, but there is one and I haven't
 //  thought carefully about what it is)
-unsigned int ExpressLRS_rngN(unsigned int max)
+unsigned int expresslrs_rngN(unsigned int max)
 {
-    unsigned long x = ExpressLRS_rng();
+    unsigned long x = expresslrs_rng();
     unsigned int result = (x * max) / RNG_MAX;
     return result;
 }
 
-long ExpressLRS_rng8Bit(void)
+long expresslrs_rng8Bit(void)
 {
-    return ExpressLRS_rng() & 0b11111111; // 0..255 returned
+    return expresslrs_rng() & 0b11111111; // 0..255 returned
 }
 
-long ExpressLRS_rng5Bit(void)
+long expresslrs_rng5Bit(void)
 {
-    return ExpressLRS_rng() & 0b11111; // 0..31 returned
+    return expresslrs_rng() & 0b11111; // 0..31 returned
 }
 
-long ExpressLRS_rng0to2(void)
+long expresslrs_rng0to2(void)
 {
-    int randomNumber = ExpressLRS_rng() & 0b11; // 0..2 returned
+    int randomNumber = expresslrs_rng() & 0b11; // 0..2 returned
 
     while (randomNumber == 3)
     {
-        randomNumber = ExpressLRS_rng() & 0b11;
+        randomNumber = expresslrs_rng() & 0b11;
     }
     return randomNumber;
 }
 
 //////////////////////////////////////////// FHSS ROUTINES ///////////////////////////////////////////
 
-#define Regulatory_Domain_FCC_915 // TODO make dynamic
+uint32_t expresslrs_fhss_start_freq;
+uint32_t expresslrs_fhss_interval;
+uint32_t expresslrs_fhss_num_freqs;
 
-// Our table of FHSS frequencies. Define a regulatory domain to select the correct set for your location and radio
-#ifdef defined Regulatory_Domain_AU_915
-const uint32_t ExpressLRS_FHSSfreqs[] = {
-    915500000,
-    916100000,
-    916700000,
-    917300000,
+uint8_t expresslrs_fhss_ptr = 0; //value of current index in expresslrs_fhss_sequence array
 
-    917900000,
-    918500000,
-    919100000,
-    919700000,
+#define NR_SEQUENCE_ENTRIES 256
 
-    920300000,
-    920900000,
-    921500000,
-    922100000,
+uint8_t expresslrs_fhss_sequence[NR_SEQUENCE_ENTRIES] = {0};
 
-    922700000,
-    923300000,
-    923900000,
-    924500000,
+void expresslrs_fhss_init_freq(uint8_t regulatory_domain)
+{
+    switch (regulatory_domain)
+    {
+    case 0: //915 AU
+        expresslrs_fhss_start_freq = 915500000;
+        expresslrs_fhss_interval = 600000;
+        expresslrs_fhss_num_freqs = 20;
+        debugln("915 AU");
+        break;
+    case 1: // 915 FCC
+        expresslrs_fhss_start_freq = 903500000;
+        expresslrs_fhss_interval = 600000;
+        expresslrs_fhss_num_freqs = 40;
+        debugln("915 FCC");
+        break;
+    case 2: //868 EU
+        expresslrs_fhss_start_freq = 863275000;
+        expresslrs_fhss_interval = 525000;
+        expresslrs_fhss_num_freqs = 13;
+        debugln("868 EU");
+        break;
+    }
 
-    925100000,
-    925700000,
-    926300000,
-    926900000};
-#elif defined Regulatory_Domain_EU_868
-/* Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
+    expresslrs_fhss_generate_sequence(); // generate the pseudo random hop seq
+}
+
+/* 868 EU Frequency bands taken from https://wetten.overheid.nl/BWBR0036378/2016-12-28#Bijlagen
  * Note: these frequencies fall in the license free H-band, but in combination with 500kHz 
  * LoRa modem bandwidth used by ExpressLRS (EU allows up to 125kHz modulation BW only) they
  * will never pass RED certification and they are ILLEGAL to use. 
  * 
  * Therefore we simply maximize the usage of available spectrum so laboratory testing of the software won't disturb existing
  * 868MHz ISM band traffic too much.
- */
-const uint32_t ExpressLRS_FHSSfreqs[] = {
+
     863275000, // band H1, 863 - 865MHz, 0.1% duty cycle or CSMA techniques, 25mW EIRP
     863800000,
     864325000,
@@ -257,108 +262,33 @@ const uint32_t ExpressLRS_FHSSfreqs[] = {
     868525000, // Band H3, 868.7-869.2MHz, 0.1% dutycycle or CSMA, 25mW EIRP
     869050000,
     869575000};
-#elif defined Regulatory_Domain_FCC_915
-/* Very definitely not fully checked. An initial pass at increasing the hops
 */
-const uint32_t ExpressLRS_FHSSfreqs[] = {
-    903500000,
-    904100000,
-    904700000,
-    905300000,
+// Very definitely not fully checked. An initial pass at increasing the hops
 
-    905900000,
-    906500000,
-    907100000,
-    907700000,
-
-    908300000,
-    908900000,
-    909500000,
-    910100000,
-
-    910700000,
-    911300000,
-    911900000,
-    912500000,
-
-    913100000,
-    913700000,
-    914300000,
-    914900000,
-
-    915500000, // as per AU..
-    916100000,
-    916700000,
-    917300000,
-
-    917900000,
-    918500000,
-    919100000,
-    919700000,
-
-    920300000,
-    920900000,
-    921500000,
-    922100000,
-
-    922700000,
-    923300000,
-    923900000,
-    924500000,
-
-    925100000,
-    925700000,
-    926300000,
-    926900000};
-#else
-#error No regulatory domain defined, please define one in common.h
-#endif
-
-// The number of FHSS frequencies in the table
-#define NR_FHSS_ENTRIES (sizeof(ExpressLRS_FHSSfreqs) / sizeof(uint32_t))
-
-#define NR_SEQUENCE_ENTRIES 256
-
-uint8_t volatile ExpressLRS_FHSSptr = 0;
-uint8_t ExpressLRS_FHSSsequence[256] = {0};
-
-void ExpressLRS_FHSSsetCurrIndex(uint8_t value)
-{ // set the current index of the FHSS pointer
-    ExpressLRS_FHSSptr = value;
+uint32_t expresslrs_fhss_get_array_val(uint8_t index)
+{
+    return ((index*expresslrs_fhss_interval)+expresslrs_fhss_start_freq);
 }
 
-uint8_t ExpressLRS_FHSSgetCurrIndex()
+uint8_t expresslrs_fhss_get_index()
 { // get the current index of the FHSS pointer
-    return ExpressLRS_FHSSptr;
+    return expresslrs_fhss_ptr;
 }
 
-uint32_t ExpressLRS_GetInitialFreq()
+uint32_t expresslrs_fhss_inital_freq()
 {
-    return ExpressLRS_FHSSfreqs[0];
+    return expresslrs_fhss_start_freq;
 }
 
-uint32_t ExpressLRS_FHSSgetCurrFreq()
+uint32_t expresslrs_fhss_get_curr_freq()
 {
-    return ExpressLRS_FHSSfreqs[ExpressLRS_FHSSsequence[ExpressLRS_FHSSptr]];
+    return expresslrs_fhss_get_array_val(expresslrs_fhss_sequence[expresslrs_fhss_ptr]);
 }
 
-uint32_t ExpressLRS_FHSSgetNextFreq()
+uint32_t expresslrs_fhss_get_next_freq()
 {
-    ExpressLRS_FHSSptr++;
-    return ExpressLRS_FHSSgetCurrFreq();
-}
-
-// Set all of the flags in the array to true, except for the first one
-// which corresponds to the sync channel and is never available for normal
-// allocation.
-void ExpressLRS_resetIsAvailable(uint8_t *array)
-{
-    // channel 0 is the sync channel and is never considered available
-    array[0] = 0;
-
-    // all other entires to 1
-    for (unsigned int i = 1; i < NR_FHSS_ENTRIES; i++)
-        array[i] = 1;
+    expresslrs_fhss_ptr++;
+    return expresslrs_fhss_get_curr_freq();
 }
 
 /**
@@ -378,39 +308,40 @@ Approach:
     if the index is not a repeat, assing it to the FHSSsequence array, clear the availability flag and decrement the available count
     if there are no available channels left, reset the flags array and the count
 */
-void ExpressLRS_FHSSrandomiseFHSSsequence()
+
+// Set all of the flags in the array to true, except for the first one
+// which corresponds to the sync channel and is never available for normal expresslrs_fhss_calc_reset_available
+// allocation.
+void expresslrs_fhss_calc_reset_available(uint8_t *array)
 {
+    // channel 0 is the sync channel and is never considered available
+    array[0] = 0;
 
-#ifdef Regulatory_Domain_AU_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_FCC_915
-    Serial.println("Setting 915MHz Mode");
-#elif defined Regulatory_Domain_EU_868
-    Serial.println("Setting 868MHz Mode");
-#elif defined Regulatory_Domain_AU_433 || defined Regulatory_Domain_EU_433
-    Serial.println("Setting 433MHz Mode");
-#else
-#error No regulatory domain defined, please define one in common.h
-#endif
+    // all other entires to 1
+    for (unsigned int i = 1; i < expresslrs_fhss_num_freqs; i++)
+        array[i] = 1;
+}
 
-    Serial.print("Number of FHSS frequencies =");
-    Serial.println(NR_FHSS_ENTRIES);
+void expresslrs_fhss_generate_sequence()
+{
+    debug("Number of FHSS frequencies =");
+    debugln(" %d", expresslrs_fhss_num_freqs);
 
     long macSeed = ((long)UID[2] << 24) + ((long)UID[3] << 16) + ((long)UID[4] << 8) + UID[5];
-    ExpressLRS_rngSeed(macSeed);
+    expresslrs_rngSeed(macSeed);
 
-    uint8_t ExpressLRS_isAvailable[NR_FHSS_ENTRIES];
+    uint8_t expresslrs_fhss_is_available[expresslrs_fhss_num_freqs];
 
-    ExpressLRS_resetIsAvailable(ExpressLRS_isAvailable);
+    expresslrs_fhss_calc_reset_available(expresslrs_fhss_is_available);
 
     // Fill the FHSSsequence with channel indices
     // The 0 index is special - the 'sync' channel. The sync channel appears every
     // syncInterval hops. The other channels are randomly distributed between the
     // sync channels
-    const int SYNC_INTERVAL = 20;
+    int SYNC_INTERVAL = expresslrs_fhss_num_freqs - 1;
 
-    int nLeft = NR_FHSS_ENTRIES - 1; // how many channels are left to be allocated. Does not include the sync channel
-    unsigned int prev = 0;           // needed to prevent repeats of the same index
+    int nLeft = expresslrs_fhss_num_freqs - 1; // how many channels are left to be allocated. Does not include the sync channel
+    unsigned int prev = 0;                     // needed to prevent repeats of the same index
 
     // for each slot in the sequence table
     for (int i = 0; i < NR_SEQUENCE_ENTRIES; i++)
@@ -418,7 +349,7 @@ void ExpressLRS_FHSSrandomiseFHSSsequence()
         if (i % SYNC_INTERVAL == 0)
         {
             // assign sync channel 0
-            ExpressLRS_FHSSsequence[i] = 0;
+            expresslrs_fhss_sequence[i] = 0;
             prev = 0;
         }
         else
@@ -427,14 +358,14 @@ void ExpressLRS_FHSSrandomiseFHSSsequence()
             unsigned int index;
             do
             {
-                int c = ExpressLRS_rngN(nLeft); // returnc 0<c<nLeft
+                int c = expresslrs_rngN(nLeft); // returnc 0<c<nLeft
                 // find the c'th entry in the isAvailable array
                 // can skip 0 as that's the sync channel and is never available for normal allocation
                 index = 1;
                 int found = 0;
-                while (index < NR_FHSS_ENTRIES)
+                while (index < expresslrs_fhss_num_freqs)
                 {
-                    if (ExpressLRS_isAvailable[index])
+                    if (expresslrs_fhss_is_available[index])
                     {
                         if (found == c)
                             break;
@@ -442,10 +373,10 @@ void ExpressLRS_FHSSrandomiseFHSSsequence()
                     }
                     index++;
                 }
-                if (index == NR_FHSS_ENTRIES)
+                if (index == expresslrs_fhss_num_freqs)
                 {
                     // This should never happen
-                    Serial.print("FAILED to find the available entry!\n");
+                    debugln("FAILED to find the available entry!\n");
                     // What to do? We don't want to hang as that will stop us getting to the wifi hotspot
                     // Use the sync channel
                     index = 0;
@@ -453,34 +384,43 @@ void ExpressLRS_FHSSrandomiseFHSSsequence()
                 }
             } while (index == prev); // can't use index if it repeats the previous value
 
-            ExpressLRS_FHSSsequence[i] = index; // assign the value to the sequence array
-            ExpressLRS_isAvailable[index] = 0;  // clear the flag
-            prev = index;                       // remember for next iteration
-            nLeft--;                            // reduce the count of available channels
+            expresslrs_fhss_sequence[i] = index;     // assign the value to the sequence array
+            expresslrs_fhss_is_available[index] = 0; // clear the flag
+            prev = index;                            // remember for next iteration
+            nLeft--;                                 // reduce the count of available channels
             if (nLeft == 0)
             {
                 // we've assigned all of the channels, so reset for next cycle
-                ExpressLRS_resetIsAvailable(ExpressLRS_isAvailable);
-                nLeft = NR_FHSS_ENTRIES - 1;
+                expresslrs_fhss_calc_reset_available(expresslrs_fhss_is_available);
+                nLeft = expresslrs_fhss_num_freqs - 1;
             }
         }
 
-        Serial.print(ExpressLRS_FHSSsequence[i]);
+        debug(" %02d", expresslrs_fhss_sequence[i]);
         if ((i + 1) % 10 == 0)
         {
-            Serial.println();
+            debugln(" ");
         }
         else
         {
-            Serial.print(" ");
+            debug(" ");
         }
     } // for each element in FHSSsequence
 
-    Serial.println();
+    debugln("");
+
+    debugln("List of Freqs:");
+
+    for (int i = 0; i < expresslrs_fhss_num_freqs; i++)
+    {
+        debugln("%d", expresslrs_fhss_get_array_val(i));
+    }
+
+    debugln("");
 }
 
 /* CRC8 implementation with polynom = x​7​+ x​6​+ x​4​+ x​2​+ x​0 ​(0xD5) */ //from betaflight: https://github.com/betaflight/betaflight/blob/c8b5edb415c33916c91a7ccc8bd19c7276540cd1/src/test/unit/rx_crsf_unittest.cc#L65
-static const unsigned char crc8tab[256] = {
+static const unsigned char expresslrs_crc8tab[256] = {
     0x00, 0xD5, 0x7F, 0xAA, 0xFE, 0x2B, 0x81, 0x54, 0x29, 0xFC, 0x56, 0x83, 0xD7, 0x02, 0xA8, 0x7D,
     0x52, 0x87, 0x2D, 0xF8, 0xAC, 0x79, 0xD3, 0x06, 0x7B, 0xAE, 0x04, 0xD1, 0x85, 0x50, 0xFA, 0x2F,
     0xA4, 0x71, 0xDB, 0x0E, 0x5A, 0x8F, 0x25, 0xF0, 0x8D, 0x58, 0xF2, 0x27, 0x73, 0xA6, 0x0C, 0xD9,
@@ -498,12 +438,12 @@ static const unsigned char crc8tab[256] = {
     0xD6, 0x03, 0xA9, 0x7C, 0x28, 0xFD, 0x57, 0x82, 0xFF, 0x2A, 0x80, 0x55, 0x01, 0xD4, 0x7E, 0xAB,
     0x84, 0x51, 0xFB, 0x2E, 0x7A, 0xAF, 0x05, 0xD0, 0xAD, 0x78, 0xD2, 0x07, 0x53, 0x86, 0x2C, 0xF9};
 
-uint8_t CalcCRC(uint8_t *data, int length)
+uint8_t expresslrs_crc(uint8_t *data, int length)
 {
     uint8_t crc = 0;
     for (uint8_t i = 0; i < length; i++)
     {
-        crc = crc8tab[crc ^ *data++];
+        crc = expresslrs_crc8tab[crc ^ *data++];
     }
     return crc;
 }
