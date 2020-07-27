@@ -48,8 +48,9 @@ uint8_t SX1276_Reset()
 	//TODO when pin is not wired
 	#ifdef SX1276_RST_pin
 		SX1276_RST_off;
-		delayMicroseconds(200);
+		delayMicroseconds(500);
 		SX1276_RST_on;
+		delayMicroseconds(500);
 	#endif
     return 0;
 }

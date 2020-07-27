@@ -143,7 +143,7 @@ const char STR_SUBTYPE_HOTT[] =       "\x07""Sync\0  ""No_Sync";
 const char STR_SUBTYPE_PELIKAN[] =    "\x04""Pro\0""Lite";
 const char STR_SUBTYPE_V761[] =       "\x03""3CH""4CH";
 const char STR_SUBTYPE_RLINK[] =      "\x07""Surface";
-const char STR_SUBTYPE_ELRS[] =       "\x07""915 AU 200 Hz\0""915 AU 100 Hz\0""915 AU 50 Hz\0""915 FCC 200 Hz\0""915 FCC 100 Hz\0""915 FCC 50 Hz\0""868 EU 200 Hz\0""868 EU 100 Hz\0""868 EU 50 Hz";
+const char STR_SUBTYPE_ELRS[] =       "\x08""915AU200""915AU100""915AU50\0""915FC200""915FC100""915FC50\0""868EU200""868EU100""868EU50\0";
 
 enum
 {
@@ -251,10 +251,10 @@ const mm_protocol_definition multi_protocols[] = {
 		{PROTO_FRSKYL,     STR_FRSKYL,    2, STR_SUBTYPE_FRSKYL,    OPTION_RFTUNE  },
 	#endif
 	#if defined(FRSKYR9_SX1276_INO)
-		{PROTO_FRSKY_R9,   STR_FRSKYR9,   8, STR_SUBTYPE_FRSKYR9,   OPTION_NONE    },
+		{PROTO_FRSKY_R9,   STR_FRSKYR9,   9, STR_SUBTYPE_FRSKYR9,   OPTION_NONE    },
 	#endif
 	#if defined(ELRS_SX1276_INO)
-		{PROTO_ELRS,       STR_ELRS,      3, STR_SUBTYPE_ELRS,      OPTION_NONE    },
+		{PROTO_ELRS,       STR_ELRS,      8, STR_SUBTYPE_ELRS,      OPTION_RFCHAN  },
 	#endif
 	#if defined(FX816_NRF24L01_INO)
 		{PROTO_FX816,      STR_FX816,     1, STR_SUBTYPE_FX816,     OPTION_NONE    },
