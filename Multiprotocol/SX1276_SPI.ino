@@ -215,7 +215,7 @@ void SX1276_SetSyncWord(uint8_t syncWord)
     debugln("Reserved Syncword detected in UID config, Using 0x35 instead");
   }
 
-  SX1276_WriteReg(SX1276_MODEM_CONFIG_SYNC_WORD, syncWord);
+  SX1276_WriteReg(SX1276_39_REGSYNCWORD, syncWord);
 }
 
 void SX1276_SetDetectionThreshold(uint8_t threshold)
