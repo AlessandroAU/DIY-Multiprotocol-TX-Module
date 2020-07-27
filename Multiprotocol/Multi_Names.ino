@@ -254,7 +254,7 @@ const mm_protocol_definition multi_protocols[] = {
 		{PROTO_FRSKY_R9,   STR_FRSKYR9,   8, STR_SUBTYPE_FRSKYR9,   OPTION_NONE    },
 	#endif
 	#if defined(ELRS_SX1276_INO)
-		{PROTO_ELRS,       STR_ELRS,      8, STR_SUBTYPE_ELRS,      OPTION_RFCHAN  },
+		{PROTO_ELRS,       STR_ELRS,      9, STR_SUBTYPE_ELRS,      OPTION_RFCHAN  },
 	#endif
 	#if defined(FX816_NRF24L01_INO)
 		{PROTO_FX816,      STR_FX816,     1, STR_SUBTYPE_FX816,     OPTION_NONE    },
