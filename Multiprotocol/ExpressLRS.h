@@ -44,7 +44,7 @@ typedef struct expresslrs_mod_settings_s
     uint8_t FHSShopInterval;            // every X packets we hope to a new frequnecy. Max value of 16 since only 4 bits have been assigned in the sync package.
     uint8_t PreambleLen;
     uint32_t SyncPktInterval;
-    
+
 } expresslrs_mod_settings_t;
 
 
