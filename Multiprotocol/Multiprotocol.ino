@@ -119,6 +119,8 @@ uint16_t state;
 uint8_t  len;
 uint8_t  armed, arm_flags, arm_channel_previous;
 uint8_t  num_ch;
+uint32_t pps_timer;
+uint16_t pps_counter;
 
 #ifdef CC2500_INSTALLED
 	#ifdef SCANNER_CC2500_INO
@@ -766,7 +768,7 @@ bool Update_All()
 	update_led_status();
 	#if defined(TELEMETRY)
 		#if ( !( defined(MULTI_TELEMETRY) || defined(MULTI_STATUS) ) )
-			if((protocol == PROTO_BAYANG_RX) || (protocol == PROTO_AFHDS2A_RX) || (protocol == PROTO_FRSKY_RX) || (protocol == PROTO_SCANNER) || (protocol==PROTO_FRSKYD) || (protocol==PROTO_BAYANG) || (protocol==PROTO_NCC1701) || (protocol==PROTO_BUGS) || (protocol==PROTO_BUGSMINI) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_FRSKYX) || (protocol==PROTO_FRSKYX2) || (protocol==PROTO_DSM) || (protocol==PROTO_CABELL) || (protocol==PROTO_HITEC) || (protocol==PROTO_HOTT) || (protocol==PROTO_PROPEL) || (protocol==PROTO_DEVO) || (protocol==PROTO_DSM_RX))
+			if((protocol == PROTO_BAYANG_RX) || (protocol == PROTO_AFHDS2A_RX) || (protocol == PROTO_FRSKY_RX) || (protocol == PROTO_SCANNER) || (protocol==PROTO_FRSKYD) || (protocol==PROTO_BAYANG) || (protocol==PROTO_NCC1701) || (protocol==PROTO_BUGS) || (protocol==PROTO_BUGSMINI) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_FRSKYX) || (protocol==PROTO_FRSKYX2) || (protocol==PROTO_DSM) || (protocol==PROTO_CABELL) || (protocol==PROTO_HITEC) || (protocol==PROTO_HOTT) || (protocol==PROTO_PROPEL) || (protocol==PROTO_DEVO) || (protocol==PROTO_DSM_RX) || (protocol==PROTO_FRSKY_R9) || (protocol==PROTO_RLINK))
 		#endif
 				if(IS_DISABLE_TELEM_off)
 					TelemetryUpdate();
@@ -782,8 +784,8 @@ bool Update_All()
 		{ // Autobind is on and BIND_CH went down
 			BIND_CH_PREV_off;
 			//Request protocol to terminate bind
-			#if defined(FRSKYD_CC2500_INO) || defined(FRSKYL_CC2500_INO) || defined(FRSKYX_CC2500_INO) || defined(FRSKYV_CC2500_INO) || defined(AFHDS2A_A7105_INO)
-			if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A )
+			#if defined(FRSKYD_CC2500_INO) || defined(FRSKYL_CC2500_INO) || defined(FRSKYX_CC2500_INO) || defined(FRSKYV_CC2500_INO) || defined(AFHDS2A_A7105_INO) || defined(FRSKYR9_SX1276_INO)
+			if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A || protocol==PROTO_FRSKY_R9)
 				BIND_DONE;
 			else
 			#endif
@@ -1041,6 +1043,8 @@ static void protocol_init()
 			#endif
 			tx_pause();
 			init_frskyd_link_telemetry();
+			pps_timer=millis();
+			pps_counter=0;
 			#ifdef BASH_SERIAL
 				TIMSK0 = 0 ;			// Stop all timer 0 interrupts
 				#ifdef INVERT_SERIAL
@@ -1063,7 +1067,8 @@ static void protocol_init()
 					rx_rc_chan[ch] = 1024;
 			#endif
 		#endif
-
+		binding_idx=0;
+		
 		//Set global ID and rx_tx_addr
 		MProtocol_id = RX_num + MProtocol_id_master;
 		set_rx_tx_addr(MProtocol_id);
@@ -1131,6 +1136,13 @@ static void protocol_init()
 						remote_callback = ReadPelikan;
 						break;
 				#endif
+				#if defined(KYOSHO_A7105_INO)
+					case PROTO_KYOSHO:
+						PE1_off;	//antenna RF1
+						next_callback = initKyosho();
+						remote_callback = ReadKyosho;
+						break;
+				#endif
 			#endif
 			#ifdef CC2500_INSTALLED
 				#if defined(FRSKYD_CC2500_INO)
@@ -1160,6 +1172,10 @@ static void protocol_init()
 				#if defined(FRSKYX_CC2500_INO)
 					case PROTO_FRSKYX:
 					case PROTO_FRSKYX2:
+						#ifdef EU_MODULE
+							if(sub_protocol<2)
+								break;
+						#endif
 						PE1_off;	//antenna RF2
 						PE2_on;
 						next_callback = initFrSkyX();
@@ -1236,6 +1252,14 @@ static void protocol_init()
 						PE2_on;	//antenna RF2
 						next_callback = initESKY150V2();
 						remote_callback = ESKY150V2_callback;
+						break;
+				#endif
+				#if defined(RLINK_CC2500_INO)
+					case PROTO_RLINK:
+						PE1_off;
+						PE2_on;	//antenna RF2
+						next_callback = initRLINK();
+						remote_callback = RLINK_callback;
 						break;
 				#endif
 			#endif
@@ -1575,6 +1599,12 @@ static void protocol_init()
 						remote_callback = TEST_callback;
 						break;
 				#endif
+				#if defined(FAKE_NRF24L01_INO)
+					case PROTO_FAKE:
+						next_callback=initFAKE();
+						remote_callback = FAKE_callback;
+						break;
+				#endif
 			#endif
 			#ifdef SX1276_INSTALLED
 				#if defined(FRSKYR9_SX1276_INO)
@@ -1814,8 +1844,8 @@ void update_serial_data()
 		else
 			if( ((rx_ok_buff[1]&0x80)==0) && ((cur_protocol[1]&0x80)!=0) )	// Bind flag has been reset
 			{ // Request protocol to end bind
-				#if defined(FRSKYD_CC2500_INO) || defined(FRSKYL_CC2500_INO) || defined(FRSKYX_CC2500_INO) || defined(FRSKYV_CC2500_INO) || defined(AFHDS2A_A7105_INO) || defined(FRSKYR9_SX1276_INO)
-				if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A || protocol==PROTO_FRSKY_R9 )
+				#if defined(FRSKYD_CC2500_INO) || defined(FRSKYL_CC2500_INO) || defined(FRSKYX_CC2500_INO) || defined(FRSKYV_CC2500_INO) || defined(AFHDS2A_A7105_INO) || defined(FRSKYR9_SX1276_INO) || defined(DSM_RX_CYRF6936_INO)
+				if(protocol==PROTO_FRSKYD || protocol==PROTO_FRSKYL || protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKYV || protocol==PROTO_AFHDS2A || protocol==PROTO_FRSKY_R9 || protocol==PROTO_DSM_RX)
 					BIND_DONE;
 				else
 				#endif
@@ -1874,14 +1904,14 @@ void update_serial_data()
 	#endif
 	if(rx_len>27)
 	{ // Data available for the current protocol
-		#if defined FRSKYX_CC2500_INO
-			if((protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2) && rx_len==28)
+		#if defined(FRSKYX_CC2500_INO) || defined(FRSKYR9_SX1276_INO)
+			if((protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || protocol==PROTO_FRSKY_R9) && rx_len==28)
 			{//Protocol waiting for 1 byte during bind
 				binding_idx=rx_ok_buff[27];
 			}
 		#endif
 		#ifdef SPORT_SEND
-			if((protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2) && rx_len==35)
+			if((protocol==PROTO_FRSKYX || protocol==PROTO_FRSKYX2 || PROTO_FRSKY_R9) && rx_len==35)
 			{//Protocol waiting for 8 bytes
 				#define BYTE_STUFF	0x7D
 				#define STUFF_MASK	0x20
@@ -2175,7 +2205,7 @@ void pollBoot()
 #if defined(TELEMETRY)
 void PPM_Telemetry_serial_init()
 {
-	if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_BAYANG)|| (protocol==PROTO_NCC1701) || (protocol==PROTO_CABELL)  || (protocol==PROTO_HITEC) || (protocol==PROTO_BUGS) || (protocol==PROTO_BUGSMINI) || (protocol==PROTO_PROPEL)
+	if( (protocol==PROTO_FRSKYD) || (protocol==PROTO_HUBSAN) || (protocol==PROTO_AFHDS2A) || (protocol==PROTO_BAYANG)|| (protocol==PROTO_NCC1701) || (protocol==PROTO_CABELL)  || (protocol==PROTO_HITEC) || (protocol==PROTO_BUGS) || (protocol==PROTO_BUGSMINI) || (protocol==PROTO_PROPEL) || (protocol==PROTO_RLINK)
 	#ifdef TELEMETRY_FRSKYX_TO_FRSKYD
 		 || (protocol==PROTO_FRSKYX) || (protocol==PROTO_FRSKYX2)
 	#endif

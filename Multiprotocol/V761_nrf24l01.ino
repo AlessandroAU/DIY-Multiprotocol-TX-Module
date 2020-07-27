@@ -53,6 +53,8 @@ static void __attribute__((unused)) V761_set_checksum()
 
 static void __attribute__((unused)) V761_send_packet()
 {
+	static bool calib=false, prev_ch6=false;
+	
 	if(phase != V761_DATA)
 	{
 		packet[0] = rx_tx_addr[0];
@@ -66,23 +68,44 @@ static void __attribute__((unused)) V761_send_packet()
 	}
 	else
 	{ 
-		packet[0] = convert_channel_8b(THROTTLE);		// throttle       
-		packet[1] = convert_channel_8b(RUDDER)>>1;		// rudder
-		packet[2] = convert_channel_8b(ELEVATOR)>>1;	// elevator
-		packet[3] = convert_channel_8b(AILERON)>>1;		// aileron
-		packet[5] = (packet_count++ / 3)<<6;
-		packet[4] = (packet[5] == 0x40) ? 0x1a : 0x20;
+		packet[0] = convert_channel_8b(THROTTLE);		// Throttle
+		packet[2] = convert_channel_8b(ELEVATOR)>>1;	// Elevator
 
-		// Channel 5 - Gyro mode is packet 5
-		if(CH5_SW)    // Mode Expert Gyro off
+		if(sub_protocol==V761_3CH)
+		{
+			packet[1] = convert_channel_8b(RUDDER)>>1;	// Rudder
+			packet[3] = convert_channel_8b(AILERON)>>1;	// Aileron
+		}
+		else
+		{
+			packet[1] = convert_channel_8b(AILERON)>>1;	// Aileron
+			packet[3] = convert_channel_8b(RUDDER)>>1;	// Rudder
+		}
+
+		packet[5] = (packet_count++ / 3)<<6;
+		packet[4] = (packet[5] == 0x40) ? 0x1a : 0x20;	// ?
+
+		if(CH5_SW)										// Mode Expert Gyro off
 			flags = 0x0c;
 		else
 			if(Channel_data[CH5] < CHANNEL_MIN_COMMAND)
-				flags = 0x08;     // Beginer mode (Gyro on, yaw and pitch rate limited)
+				flags = 0x08;							// Beginer mode (Gyro on, yaw and pitch rate limited)
 			else
-				flags = 0x0a;     // Mid Mode ( Gyro on no rate limits)        
+				flags = 0x0a;							// Mid Mode ( Gyro on no rate limits)        
+
+		if(!prev_ch6 && CH6_SW)							// -100% -> 100% launch gyro calib
+			calib=!calib;
+		prev_ch6 = CH6_SW;
+		if(calib)
+			flags |= 0x01;								// Gyro calibration
+
 		packet[5] |= flags;
-		packet[6] = 0x80; // unknown 
+
+		packet[6] =  GET_FLAG(CH7_SW, 0x20) 			// Flip
+					|GET_FLAG(CH8_SW, 0x08)				// RTH activation
+					|GET_FLAG(CH9_SW, 0x10);			// RTH on/off
+		if(sub_protocol==V761_3CH)
+			packet[6] |= 0x80;							// unknown, set on original V761-1 dump but not on eachine dumps, keeping for compatibility
 
 		//packet counter
 		if(packet_count >= 12)
@@ -120,22 +143,30 @@ static void __attribute__((unused)) V761_init()
 
 static void __attribute__((unused)) V761_initialize_txid()
 {
-	// TODO: try arbitrary rx_tx_addr & frequencies (except hopping_frequency[0])
-	switch(RX_num%3)
+	switch(RX_num%5)
 	{
 		case 1:	//Dump from air on Protonus TX
 			memcpy(rx_tx_addr,(uint8_t *)"\xE8\xE4\x45\x09",4);
-			memcpy(hopping_frequency,(uint8_t *)"\x0D\x21\x44",3);
+			memcpy(hopping_frequency,(uint8_t *)"\x0D\x21",2);
 			break;
 		case 2:	//Dump from air on mshagg2 TX
 			memcpy(rx_tx_addr,(uint8_t *)"\xAE\xD1\x45\x09",4);
-			memcpy(hopping_frequency,(uint8_t *)"\x13\x1D\x4A",3);
+			memcpy(hopping_frequency,(uint8_t *)"\x13\x1D",2);
+			break;
+		case 3:	//Dump from air on MikeHRC Eachine TX
+			memcpy(rx_tx_addr,(uint8_t *)"\x08\x03\x00\xA0",4);		// To be checked
+			memcpy(hopping_frequency,(uint8_t *)"\x0D\x21",2);		// To be checked
+			break;
+		case 4:	//Dump from air on Crashanium Eachine TX
+			memcpy(rx_tx_addr,(uint8_t *)"\x58\x08\x00\xA0",4);		// To be checked
+			memcpy(hopping_frequency,(uint8_t *)"\x0D\x31",3);		// To be checked
 			break;
 		default: //Dump from SPI
 			memcpy(rx_tx_addr,(uint8_t *)"\x6f\x2c\xb1\x93",4);
-			memcpy(hopping_frequency,(uint8_t *)"\x14\x1e\x4b",3);
+			memcpy(hopping_frequency,(uint8_t *)"\x14\x1e",3);
 			break;
 	}
+	hopping_frequency[2]=hopping_frequency[0]+0x37;
 }
 
 uint16_t V761_callback()
@@ -185,10 +216,14 @@ uint16_t V761_callback()
 
 uint16_t initV761(void)
 {
-	BIND_IN_PROGRESS;
-	bind_counter = V761_BIND_COUNT;
 	V761_initialize_txid();
-	phase = V761_BIND1;
+	if(IS_BIND_IN_PROGRESS)
+	{
+		bind_counter = V761_BIND_COUNT;
+		phase = V761_BIND1;
+	}
+	else
+		phase = V761_DATA;
 	V761_init();
 	hopping_frequency_no = 0;
 	packet_count = 0;

@@ -6,24 +6,20 @@ Here are detailed descriptions of every supported protocols (sorted by RF module
  The Deviation project (on which this project was based) have a useful list of models and protocols [here](http://www.deviationtx.com/wiki/supported_models).
 
 ## Useful notes and definitions
-- **Extended limits supported** - A command range of -125%..+125% will be transmitted. Otherwise the default is -100%..+100% only.
-- **Channel Order** - The channel order assumed in all the documentation is AETR. You can change this in the compilation settings. The module will take whatever input channel order and will rearrange them to match the output channel order required by the selected protocol. 
+- **Channel Order** - The channel order assumed in all the documentation is AETR. You can change this in the compilation settings or by using a precompiled firmware. The module will take whatever input channel order you have choosen and will rearrange them to match the output channel order required by the selected protocol. 
+- **Channel ranges** - A radio output of -100%..0%..+100% will match on the selected protocol -100%,0%,+100%. No convertion needs to be done.
+- **Extended limits supported** - A channel range of -125%..+125% will be transmitted. Otherwise it will be truncated to -100%..+100%.
 - **Italic numbers** are referring to protocol/sub_protocol numbers that you should use if the radio (serial mode only) is not displaying (yet) the protocol you want to access.
-- **Autobind protocol**:
+- **Autobind protocol** - The transmitter will automatically initiate a bind sequence on power up or model/protocol selection.  This is for models where the receiver expects to rebind every time it is powered up. In these protocols you do not need to press the bind button at power up to bind, it will be done automatically. In case a protocol is not autobind but you want to enable it, change the "Autobind" or "Bind on channel" on OpenTX setting to Y for the specific model/entry.
 
-1. The transmitter will automatically initiate a bind sequence on power up.  This is for models where the receiver expects to rebind every time it is powered up. In these protocols you do not need to press the bind button at power up to bind, it will be done automatically. In case a protocol is not autobind but you want to enable it, change the "Autobind" (or "Bind at powerup" on OpenTX) setting to Y for the specific model/entry.
-2. Enable Bind from channel feature:
-   * Bind from channel can be globally enabled/disabled in _config.h using ENABLE_BIND_CH.
-   * Bind from channel can be locally enabled/disabled by setting Autobind to Y/N per model for serial or per dial switch number for ppm.
-   * Bind channel can be choosen on any channel between 5 and 16 using BIND_CH in _config.h. Default is 16.
-   * Bind will only happen if all these elements are happening at the same time:
-      - Autobind = Y
+## Bind on channel feature
+   * Bind on channel can be globally enabled/disabled in _config.h using ENABLE_BIND_CH. Any channel between 5 and 16 can be used by configuring BIND_CH in _config.h. Default is 16.
+   * Bind on channel can be locally enabled/disabled by setting "Bind on channel" or "Autobind" per model for serial or per dial switch number for ppm.
+   * Once activated, any bind will only happen if all these elements are happening at the same time:
+      - Bind on channel = Y
       - Throttle = LOW (<-95%)
-      - Bind channel is going from -100% to +100%
-
-* Additional notes:
-  - **It's recommended to combine the bind switch with Throttle cut or throttle at -100% to drive the bind channel. This will prevent to launch a bind while flying** and enable you to use the bind switch for something else.
-  - Using channel 16 for the bind channel seems the most relevant as only one protocol so far is using 16 channels which is FrSkyX. But even on FrSkyX this feature won't have any impact since there is NO valid reason to have Autobind set to Y for such a protocol.
+      - Bind channel (16 by default) is going from -100% to +100%
+      - **It's recommended to combine the bind switch with Throttle cut or throttle at -100% to drive the bind channel. This will prevent to launch a bind while flying** and enable you to use the bind switch for something else.
 
 ## Protocol selection in PPM mode
 The protocol selection is based on 2 parameters:
@@ -78,14 +74,14 @@ CFlie|38|CFlie||||||||NRF24L01|
 [CX10](Protocols_Details.md#CX10---12)|12|GREEN|BLUE|DM007|-|J3015_1|J3015_2|MK33041||NRF24L01|XN297
 [Devo](Protocols_Details.md#DEVO---7)|7|Devo|8CH|10CH|12CH|6CH|7CH|||CYRF6936|
 [DM002](Protocols_Details.md#DM002---33)|33|DM002||||||||NRF24L01|XN297
-[DSM](Protocols_Details.md#DSM---6)|6|DSM2-22|DSM2-11|DSMX-22|DSMX-11|AUTO||||CYRF6936|
+[DSM](Protocols_Details.md#DSM---6)|6|DSM2_1F|DSM2_2F|DSMX_1F|DSMX_2F|AUTO||||CYRF6936|
 [DSM_RX](Protocols_Details.md#DSM_RX---70)|70|RX||||||||CYRF6936|
 [E01X](Protocols_Details.md#E01X---45)|45|E012|E015|E016H||||||NRF24L01|XN297/HS6200
 [ESky](Protocols_Details.md#ESKY---16)|16|ESky|ET4|||||||NRF24L01|
 [ESky150](Protocols_Details.md#ESKY150---35)|35|ESKY150||||||||NRF24L01|
 [ESky150V2](Protocols_Details.md#ESKY150V2---69)|69|ESky150V2||||||||CC2500|NRF24L01
 [Flysky](Protocols_Details.md#FLYSKY---1)|1|Flysky|V9x9|V6x6|V912|CX20||||A7105|
-[Flysky AFHDS2A](Protocols_Details.md#FLYSKY-AFHDS2A---28)|28|PWM_IBUS|PPM_IBUS|PWM_SBUS|PPM_SBUS|||||A7105|
+[Flysky AFHDS2A](Protocols_Details.md#FLYSKY-AFHDS2A---28)|28|PWM_IBUS|PPM_IBUS|PWM_SBUS|PPM_SBUS|PWM_IBUS16|PPM_IBUS16|||A7105|
 [Flysky AFHDS2A RX](Protocols_Details.md#FLYSKY-AFHDS2A-RX---56)|56|RX||||||||A7105|
 [Flyzone](Protocols_Details.md#FLYZONE---53)|53|FZ410||||||||A7105|
 [FQ777](Protocols_Details.md#FQ777---23)|23|FQ777||||||||NRF24L01|SSV7241
@@ -93,8 +89,8 @@ CFlie|38|CFlie||||||||NRF24L01|
 [FrskyL](Protocols_Details.md#FRSKYL---67)|67|LR12|LR12 6CH|||||||CC2500|
 [FrskyR9](Protocols_Details.md#FRSKYR9---65)|65|FrskyR9|R9_915|R9_868||||||SX1276|
 [FrskyV](Protocols_Details.md#FRSKYV---25)|25|FrskyV||||||||CC2500|
-[FrskyX](Protocols_Details.md#FRSKYX---15)|15|CH_16|CH_8|EU_16|EU_8|Cloned||||CC2500|
-[FrskyX2](Protocols_Details.md#FRSKYX2---64)|64|CH_16|CH_8|EU_16|EU_8|Cloned||||CC2500|
+[FrskyX](Protocols_Details.md#FRSKYX---15)|15|CH_16|CH_8|EU_16|EU_8|Cloned|Cloned_8|||CC2500|
+[FrskyX2](Protocols_Details.md#FRSKYX2---64)|64|CH_16|CH_8|EU_16|EU_8|Cloned|Cloned_8|||CC2500|
 [Frsky_RX](Protocols_Details.md#FRSKY_RX---55)|55|RX|CloneTX|||||||CC2500|
 [FX816](Protocols_Details.md#FX816---58)|28|FX816|P38|||||||NRF24L01|
 [FY326](Protocols_Details.md#FY326---20)|20|FY326|FY319|||||||NRF24L01|
@@ -110,6 +106,7 @@ CFlie|38|CFlie||||||||NRF24L01|
 [JJRC345](Protocols_Details.md#JJRC345---71)|71|JJRC345||||||||NRF24L01|XN297
 [KF606](Protocols_Details.md#KF606---49)|49|KF606*||||||||NRF24L01|XN297
 [KN](Protocols_Details.md#KN---9)|9|WLTOYS|FEILUN|||||||NRF24L01|
+[Kyosho](Protocols_Details.md#Kyosho---73)|73|||||||||A7105|
 [MJXq](Protocols_Details.md#MJXQ---18)|18|WLH08|X600|X800|H26D|E010*|H26WH|PHOENIX*||NRF24L01|XN297
 [MT99xx](Protocols_Details.md#MT99XX---17)|17|MT|H7|YZ|LS|FY805||||NRF24L01|XN297
 [NCC1701](Protocols_Details.md#NCC1701---44)|44|NCC1701||||||||NRF24L01|
@@ -120,6 +117,7 @@ CFlie|38|CFlie||||||||NRF24L01|
 [Q2X2](Protocols_Details.md#Q2X2---29)|29|Q222|Q242|Q282||||||NRF24L01|
 [Q303](Protocols_Details.md#Q303---31)|31|Q303|CX35|CX10D|CX10WD|||||NRF24L01|XN297
 [Q90C](Protocols_Details.md#Q90C---72)|72|Q90C*||||||||NRF24L01|XN297
+[RadioLink](Protocols_Details.md#RadioLink---74)|74|Surface||||||||CC2500|
 [Redpine](Protocols_Details.md#Redpine---50)|50|FAST|SLOW|||||||NRF24L01|
 [Scanner](Protocols_Details.md#Scanner---54)|54|||||||||CC2500|
 [SFHSS](Protocols_Details.md#SFHSS---21)|21|SFHSS||||||||CC2500|
@@ -129,7 +127,7 @@ CFlie|38|CFlie||||||||NRF24L01|
 [SymaX](Protocols_Details.md#Symax---10)|10|SYMAX|SYMAX5C|||||||NRF24L01|
 [Tiger](Protocols_Details.md#Tiger---61)|61|Tiger||||||||NRF24L01|XN297
 [Traxxas](Protocols_Details.md#Traxxas---43)|43|6519 RX||||||||CYRF6936|
-[V2x2](Protocols_Details.md#V2X2---5)|5|V2x2|JXD506|||||||NRF24L01|
+[V2x2](Protocols_Details.md#V2X2---5)|5|V2x2|JXD506|MR101||||||NRF24L01|
 [V761](Protocols_Details.md#V761---48)|48|V761||||||||NRF24L01|XN297
 [V911S](Protocols_Details.md#V911S---46)|46|V911S*|E119*|||||||NRF24L01|XN297
 [WFly](Protocols_Details.md#WFLY---40)|40|WFLY||||||||CYRF6936|
@@ -142,6 +140,19 @@ CFlie|38|CFlie||||||||NRF24L01|
 # A7105 RF Module
 
 If USE_A7105_CH15_TUNING is enabled, the value of channel 15 is used by all A7105 protocols for tuning the frequency. This is required in rare cases where some A7105 modules and/or RXs have an inaccurate crystal oscillator.
+
+## BUGS - *41*
+Models: MJX Bugs 3, 6 and 8
+
+Telemetry enabled for RX & TX RSSI, Battery voltage good/bad
+
+**RX_Num is used to give a number to a given model. You must use a different RX_Num per MJX Bugs. A maximum of 16 Bugs are supported.**
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10
+---|---|---|---|---|---|---|---|---|---
+A|E|T|R|ARM|ANGLE|FLIP|PICTURE|VIDEO|LED
+
+ANGLE: angle is +100%, acro is -100%
 
 ## FLYSKY - *1*
 Extended limits supported
@@ -181,14 +192,11 @@ Extended limits and failsafe supported
 Telemetry enabled protocol:
  - by defaut using FrSky Hub protocol (for example er9x): RX(A1), battery voltage FS-CVT01(A2) and RX&TX RSSI
  - if using erskyTX and OpenTX: full telemetry information available
+ - if telemetry is incomplete (missing RX RSSI for example), it means that you have to upgrade your RX firmware to version 1.6 or later. You can do it from an original Flysky TX or using a STLink like explained in [this tutorial](https://www.rcgroups.com/forums/showthread.php?2677694-How-to-upgrade-Flysky-Turnigy-iA6B-RX-to-firmware-1-6-with-a-ST-Link).
 
 Option is used to change the servo refresh rate. A value of 0 gives 50Hz (min), 70 gives 400Hz (max). Specific refresh rate value can be calculated like this option=(refresh_rate-50)/5.
 
 **RX_Num is used to give a number a given RX. You must use a different RX_Num per RX. A maximum of 64 AFHDS2A RXs are supported.**
-
-OpenTX suggested RSSI alarm threshold settings (Telemetry tab): Low=15, Critical=12.
-
-If telemetry is incomplete (missing RX RSSI for example), it means that you have to upgrade your RX firmware to version 1.6 or later. You can do it from an original Flysky TX or using a STLink like explained in [this tutorial](https://www.rcgroups.com/forums/showthread.php?2677694-How-to-upgrade-Flysky-Turnigy-iA6B-RX-to-firmware-1-6-with-a-ST-Link).
 
 AFHDS2A_LQI_CH is a feature which is disabled by defaut in the _config.h file. When enabled, it makes LQI (Link Quality Indicator) available on one of the RX ouput channel (5-14).
 
@@ -202,6 +210,25 @@ Note that the RX ouput will be AETR whatever the input channel order is.
 ### Sub_protocol PPM_IBUS - *1*
 ### Sub_protocol PWM_SBUS - *2*
 ### Sub_protocol PPM_SBUS - *3*
+### Sub_protocol PWM_IBUS16 - *4*
+
+3 additional channels. Need recent or updated RXs.
+
+CH15|CH16|CH17
+---|---|---
+CH15|CH16|LQI
+
+LQI: Link Quality Indicator
+
+### Sub_protocol PPM_IBUS16 - *5*
+
+3 additional channels. Need recent or updated RXs.
+
+CH15|CH16|CH17
+---|---|---
+CH15|CH16|LQI
+
+LQI: Link Quality Indicator
 
 ## FLYSKY AFHDS2A RX - *56*
 The Flysky AFHDS2A receiver protocol enables master/slave trainning, separate access from 2 different radios to the same model,...
@@ -213,9 +240,7 @@ Extended limits supported
 Low power: enable/disable the LNA stage on the RF component to use depending on the distance with the TX.
 
 ## FLYZONE - *53*
-Models using the Flyzone FZ-410 TX: Fokker D.VII Micro EP RTF
-
-Models using the old ARES TX (prior to Hitec RED): Tiger Moth, eRC Micro Stik
+Models using the Flyzone FZ-410 TX: Fokker D.VII Micro EP RTF. Models using the old ARES TX (prior to Hitec RED) Tiger Moth, eRC Micro Stick and Rage R/C. 
 
 CH1|CH2|CH3|CH4
 ---|---|---|---
@@ -254,18 +279,12 @@ H122D: FLIP
 
 H123D: FMODES -> -100%=Sport mode 1,0%=Sport mode 2,+100%=Acro
 
-## BUGS - *41*
-Models: MJX Bugs 3, 6 and 8
+## Kyosho - *73*
+Surface protocol called FHSS introduced in 2017. Transmitters: KT-531P, KT-431PT, Flysky Noble NB4 (fw>2.0.67)...
 
-Telemetry enabled for RX & TX RSSI, Battery voltage good/bad
-
-**RX_Num is used to give a number to a given model. You must use a different RX_Num per MJX Bugs. A maximum of 16 Bugs are supported.**
-
-CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10
----|---|---|---|---|---|---|---|---|---
-A|E|T|R|ARM|ANGLE|FLIP|PICTURE|VIDEO|LED
-
-ANGLE: angle is +100%, acro is -100%
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|CH13|CH14
+---|---|---|---|---|---|---|---|---|----|----|----|----|----
+STEERING|THROTTLE|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|CH13|CH14
 
 ## Pelikan - *60*
 Extended limits supported
@@ -416,6 +435,13 @@ CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8
 ### Sub_protocol Cloned - *4*
 Use the identifier learnt from another FrSky radio when binding with the FrSkyRX/CloneTX mode.
 
+16 channels.
+
+### Sub_protocol Cloned_8 - *5*
+Use the identifier learnt from another FrSky radio when binding with the FrSkyRX/CloneTX mode.
+
+8 channels.
+
 ## FRSKYX2 - *64*
 Same as [FrskyX](Protocols_Details.md#FRSKYX---15) but for D16 v2.1.0 FCC/LBT.
 
@@ -518,10 +544,34 @@ You should definitively upgrade your receivers/sensors to the latest firmware ve
 ## Scanner - *54*
 2.4GHz scanner accessible using the OpenTX 2.3 Spectrum Analyser tool.
 
+## RadioLink - *74*
+
+Extended limits
+
+Option for this protocol corresponds to fine frequency tuning. This value is different for each Module and **must** be accurate otherwise the link will not be stable.
+Check the [Frequency Tuning page](/docs/Frequency_Tuning.md) to determine it.
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|CH13|CH14|CH15|CH16
+---|---|---|---|---|---|---|---|---|---|---|---|---|---|---|---
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|FS_CH1|FS_CH2|FS_CH3|FS_CH4|FS_CH5|FS_CH6|FS_CH7|FS_CH8
+
+FS=FailSafe
+
+### Sub_protocol Surface - *0*
+Surface protocol. TXs: RC4GS,RC6GS. Compatible RXs:R7FG(Std),R6FG,R6F,R8EF,R8FM,R8F,R4FGM
+
+**Only 1 ID for now**
+
+CH1=Steering, CH2=Throttle, CH8=Gyro gain
+
+Telemetry: RX_RSSI (for the original value add -256), TX_RSSI, TX_QLY (0..100%), A1=RX_Batt, A2=Batt
+
 ## SFHSS - *21*
 Models: Futaba RXs and XK models.
 
 Extended limits and failsafe supported
+
+RX output will match the Futaba standard AETR independently of the input configuration AETR, RETA... unless on OpenTX 2.3.3+ you use the "Disable channel mapping" feature on the GUI.
 
 Option for this protocol corresponds to fine frequency tuning. This value is different for each Module and **must** be accurate otherwise the link will not be stable.
 Check the [Frequency Tuning page](/docs/Frequency_Tuning.md) to determine it.
@@ -655,35 +705,31 @@ Extended limits supported
 
 Telemetry enabled for TSSI and plugins
 
-option=number of channels from 4 to 12. An invalid option value will end up with 6 channels.
-
 CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|----|CH14
 ---|---|---|---|---|---|---|---|---|----|----|----|----|----
 A|E|T|R|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|----|TH_KILL
 
 Notes:
- - model/type/number of channels indicated on the RX can be different from what the RX is in fact wanting to see. So don't hesitate to test different combinations until you have something working. Using Auto is the best way to find these settings.
+ - The "AUTO" sub protocol is recommended to automatically select the best settings for your DSM RX. If the RX doesn't bind or work properly after bind, don't hesitate to test different combinations of sub protocol and number of channels until you have something working.
+ - Servo refresh rate is 22ms unless you select 11ms available in OpenTX 2.3.10+
  - RX output will match the Spektrum standard TAER independently of the input configuration AETR, RETA... unless on OpenTX 2.3.3+ you use the "Disable channel mapping" feature on the GUI.
  - RX output will match the Spektrum standard throw (1500µs +/- 400µs -> 1100..1900µs) for a 100% input. This is true for both Serial and PPM input. For PPM, make sure the end points PPM_MIN_100 and PPM_MAX_100 in _config.h are matching your TX ouput. The maximum ouput is 1000..2000µs based on an input of 125%.
     - If you want to override the above and get maximum throw either uncomment in _config.h the line #define DSM_MAX_THROW or on OpenTX 2.3.3+ use the "Enable max throw" feature on the GUI (0=No,1=Yes). In this mode to achieve standard throw use a channel weight of 84%.
  - TH_KILL is a feature which is enabled on channel 14 by default (can be disabled/changed) in the _config.h file. Some models (X-Vert, Blade 230S...) require a special position to instant stop the motor(s). If the channel 14 is above -50% the throttle is untouched but if it is between -50% and -100%, the throttle output will be forced between -100% and -150%. For example, a value of -80% applied on channel 14 will instantly kill the motors on the X-Vert.
  - To allow SAFE to be ON with a switch assignment you must remove the bind plug after powering up the RX but before turning on the TX to bind. If you select Autodetect to bind, The MPM will choose DSMX 11ms and Channels 1-7 ( Change to 1-9 if you wish to assign switch above channel 7 ). Then in order to use the manuals diagram of both sticks "Down-Inside" to set a SAFE Select Switch Designation, you must have Throttle and Elevator channels set to Normal direction but the Aileron and Rudder set to Reverse direction. If setting up a new model with all channels set to Normal you can hold both sticks "Down- OUTSIDE" to assign the switch with 5x flips. Tested on a Mode2 radio.
-
  
-### Sub_protocol DSM2_22 - *0*
-DSM2, Resolution 1024, refresh rate 22ms
-### Sub_protocol DSM2_11 - *1*
-DSM2, Resolution 2048, refresh rate 11ms
-### Sub_protocol DSMX_22 - *2*
-DSMX, Resolution 2048, refresh rate 22ms
-### Sub_protocol DSMX_11 - *3*
-DSMX, Resolution 2048, refresh rate 11ms
-### Sub_protocol AUTO - *4*
-The "AUTO" feature enables the TX to automatically choose what are the best settings for your DSM RX and update your model protocol settings accordingly.
+Option=number of channels from 3 to 12. Option|0x80 enables Max Throw. Option|0x40 enables a servo refresh rate of 11ms.
 
-The current radio firmware which are able to use the "AUTO" feature are erskyTX (9XR Pro, 9Xtreme, Taranis, ...), er9x for M128(9XR)&M2561 and OpenTX (mostly Taranis).
-For these firmwares, you must have a telemetry enabled TX and you have to make sure you set the Telemetry "Usr proto" to "DSMx".
-Also on er9x you will need to be sure to match the polarity of the telemetry serial (normal or inverted by bitbashing), while on erskyTX you can set "Invert COM1" accordinlgy.
+### Sub_protocol DSM2_1F - *0*
+DSM2, Resolution 1024, servo refresh rate can only be 22ms
+### Sub_protocol DSM2_2F - *1*
+DSM2, Resolution 2048, servo refresh rate can be 22 or 11ms. 11ms won't be available on all servo outputs when more than 7 channels are used.
+### Sub_protocol DSMX_1F - *2*
+DSMX, Resolution 2048, servo refresh rate can only be 22ms
+### Sub_protocol DSMX_2F - *3*
+DSMX, Resolution 2048, servo refresh rate can be 22 or 11ms. 11ms won't be available on all servo outputs when more than 7 channels are used.
+### Sub_protocol AUTO - *4*
+"AUTO" is recommended to automatically select the best settings for your DSM RX.
 
 ## DSM_RX - *70*
 The DSM receiver protocol enables master/slave trainning, separate access from 2 different radios to the same model,...
@@ -1436,6 +1482,23 @@ CH10|CH11|CH12
 ---|---|---
 Start/Stop|EMERGENCY|CAMERA_UP/DN
 
+### Sub_protocol MR101 - *2*
+TX: MR101, model: Dromida XL
+
+**Only 1 ID** available. If you have a TX contact me on GitHub or RCGroups.
+
+Autobind protocol
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11
+---|---|---|---|---|---|---|---|---|----|----
+A|E|T|R|FLIP||PICTURE|VIDEO||MOT_ON_OFF|AUTO
+
+MOT_ON_OFF: momentary switch (you need to maintaint it for at least 1.5sec for on or off)
+
+AUTO: Land=-100% Takeoff=+100%
+
+The model can work with a none centered throttle.
+
 ## Tiger - *61*
 Autobind protocol
 
@@ -1446,15 +1509,28 @@ CH1|CH2|CH3|CH4|CH5|CH6
 A|E|T|R|FLIP|LIGHT
 
 ## V761 - *48*
-Model: Volantex V761 and may be other
 
-Warning: Only 3 IDs, you can cycle through them using RX_Num.
-
-CH1|CH2|CH3|CH4|CH5
----|---|---|---|---
--|E|T|R|GYRO
+Warning: **Only 5 IDs**, you can cycle through them using RX_Num.
 
 Gyro: -100%=Beginer mode (Gyro on, yaw and pitch rate limited), 0%=Mid Mode ( Gyro on no rate limits), +100%=Mode Expert Gyro off
+Calib: momentary switch, calib will happen one the channel goes from -100% to +100%
+Flip: momentary switch: hold flip(+100%), indicate flip direction with Ele or Ail, release flip(-100%)
+RTN_ACT and RTN: -100% disable, +100% enable
+
+### Sub_protocol 3CH - *0*
+Model: Volantex V761-1, V761-3 and may be others
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9
+---|---|---|---|---|---|---|---|---
+-|E|T|R|GYRO|CALIB|FLIP|RTN_ACT|RTN
+
+### Sub_protocol 4CH - *1*
+Model: Volantex V761-4+ and Eachine P51-D, F4U, F22 and may be others
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9
+---|---|---|---|---|---|---|---|---
+A|E|T|R|GYRO|CALIB|FLIP|RTN_ACT|RTN
+
 
 ## V911S - *46*
 This protocol is known to be problematic because it's using the xn297L emulation with a transmission speed of 250kbps therefore it doesn't work very well with every modules, this is an hardware issue with the accuracy of the components.
@@ -1515,11 +1591,16 @@ CH1|CH2|CH3|CH4|CH5
 # SX1276 RF Module
 
 ## FRSKYR9 - *65*
+**R9 RXs must be flashed with latest ACCST.**
+
 Extended limits and failsafe supported.
 
-**R9 RXs must be flashed with ACCST Flex.**
+Full telemetry supported.
 
-Telemetry and power adjustment not yet supported.
+Notes:
+- The choices of CH1-8/CH9-16 and Telem ON/OFF is available in OpenTX 2.3.10 nightlies. The default is CH1-8 Telem ON.
+- Telemetry from TX to RX is available in OpenTX 2.3.10 nightlies.
+- Power adjustment is not supported on the T18.
 
 ### Sub_protocol R9_915 - *0*
 915MHz, 16 channels
@@ -1544,6 +1625,20 @@ CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8
 
 ### Sub_protocol R9_868_8CH - *3*
 868MHz, 8 channels
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8
+---|---|---|---|---|---|---|---
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8
+
+### Sub_protocol R9_FCC - *4*
+FCC, 16 channels
+
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|CH13|CH14|CH15|CH16
+---|---|---|---|---|---|---|---|---|----|----|----|----|----|----|----
+CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8|CH9|CH10|CH11|CH12|CH13|CH14|CH15|CH16
+
+### Sub_protocol R9_FCC_8CH - *6*
+FCC, 8 channels
 
 CH1|CH2|CH3|CH4|CH5|CH6|CH7|CH8
 ---|---|---|---|---|---|---|---

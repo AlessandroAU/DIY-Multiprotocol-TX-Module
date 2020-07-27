@@ -118,8 +118,9 @@
 //#define FORCE_BUGS_TUNING		0
 //#define FORCE_FLYSKY_TUNING	0
 //#define FORCE_FLYZONE_TUNING	0
-//#define FORCE_PELIKAN_TUNING	0
 //#define FORCE_HUBSAN_TUNING	0
+//#define FORCE_KYOSHO_TUNING	0
+//#define FORCE_PELIKAN_TUNING	0
 
 /** CYRF6936 Fine Frequency Tuning **/
 //This is required in rare cases where some CYRF6936 modules and/or RXs have an inaccurate crystal oscillator.
@@ -165,17 +166,18 @@
 
 //The protocols below need an A7105 to be installed
 #define	AFHDS2A_A7105_INO
-#define AFHDS2A_RX_A7105_INO
+#define	AFHDS2A_RX_A7105_INO
 #define	BUGS_A7105_INO
 #define	FLYSKY_A7105_INO
 #define	FLYZONE_A7105_INO
 #define	HUBSAN_A7105_INO
-#define PELIKAN_A7105_INO
+#define KYOSHO_A7105_INO
+#define	PELIKAN_A7105_INO
 
 //The protocols below need a CYRF6936 to be installed
 #define	DEVO_CYRF6936_INO
 #define	DSM_CYRF6936_INO
-#define DSM_RX_CYRF6936_INO
+#define	DSM_RX_CYRF6936_INO
 #define	J6PRO_CYRF6936_INO
 #define	TRAXXAS_CYRF6936_INO
 #define	WFLY_CYRF6936_INO
@@ -195,52 +197,55 @@
 #define	SFHSS_CC2500_INO
 #define	SKYARTEC_CC2500_INO
 #define	REDPINE_CC2500_INO
+#define	RLINK_CC2500_INO
 
 //The protocols below need a NRF24L01 to be installed
-//#define	ASSAN_NRF24L01_INO
-//#define	BAYANG_NRF24L01_INO
-//#define	BAYANG_RX_NRF24L01_INO
-//#define	BUGSMINI_NRF24L01_INO
-//#define	CABELL_NRF24L01_INO
-//#define	CFLIE_NRF24L01_INO
-//#define	CG023_NRF24L01_INO
-//#define	CX10_NRF24L01_INO		 //Include Q2X2 protocol
-//#define	DM002_NRF24L01_INO
-//#define	E01X_NRF24L01_INO
-//#define	ESKY_NRF24L01_INO
-//#define	ESKY150_NRF24L01_INO
-//#define	FQ777_NRF24L01_INO
-//#define	FX816_NRF24L01_INO
-//#define	FY326_NRF24L01_INO
-//#define	GD00X_NRF24L01_INO
-//#define	GW008_NRF24L01_INO
-//#define	HISKY_NRF24L01_INO
-//#define	HONTAI_NRF24L01_INO
-//#define	H8_3D_NRF24L01_INO
-//#define JJRC345_NRF24L01_INO
-//#define	KF606_NRF24L01_INO
-//#define	KN_NRF24L01_INO
-//#define	MJXQ_NRF24L01_INO
-//#define	MT99XX_NRF24L01_INO
-//#define	NCC1701_NRF24L01_INO
-//#define	POTENSIC_NRF24L01_INO
-//#define	PROPEL_NRF24L01_INO
-//#define	Q303_NRF24L01_INO
-//#define	Q90C_NRF24L01_INO
-//#define	SHENQI_NRF24L01_INO
-//#define	SLT_NRF24L01_INO
-//#define	SYMAX_NRF24L01_INO
-//#define	TIGER_NRF24L01_INO
-//#define	V2X2_NRF24L01_INO
-//#define	V761_NRF24L01_INO
-//#define	V911S_NRF24L01_INO
-//#define	XK_NRF24L01_INO
-//#define	YD717_NRF24L01_INO
-//#define	ZSX_NRF24L01_INO
+#define	ASSAN_NRF24L01_INO
+#define	BAYANG_NRF24L01_INO
+#define	BAYANG_RX_NRF24L01_INO
+#define	BUGSMINI_NRF24L01_INO
+#define	CABELL_NRF24L01_INO
+#define	CFLIE_NRF24L01_INO
+#define	CG023_NRF24L01_INO
+#define	CX10_NRF24L01_INO		 //Include Q2X2 protocol
+#define	DM002_NRF24L01_INO
+#define	E01X_NRF24L01_INO
+#define	ESKY_NRF24L01_INO
+#define	ESKY150_NRF24L01_INO
+#define	FQ777_NRF24L01_INO
+#define	FX816_NRF24L01_INO
+#define	FY326_NRF24L01_INO
+#define	GD00X_NRF24L01_INO
+#define	GW008_NRF24L01_INO
+#define	HISKY_NRF24L01_INO
+#define	HONTAI_NRF24L01_INO
+#define	H8_3D_NRF24L01_INO
+#define	JJRC345_NRF24L01_INO
+#define	KF606_NRF24L01_INO
+#define	KN_NRF24L01_INO
+#define	MJXQ_NRF24L01_INO
+#define	MT99XX_NRF24L01_INO
+#define	NCC1701_NRF24L01_INO
+#define	POTENSIC_NRF24L01_INO
+#define	PROPEL_NRF24L01_INO
+#define	Q303_NRF24L01_INO
+#define	Q90C_NRF24L01_INO
+#define	SHENQI_NRF24L01_INO
+#define	SLT_NRF24L01_INO
+#define	SYMAX_NRF24L01_INO
+#define	TIGER_NRF24L01_INO
+#define	V2X2_NRF24L01_INO
+#define	V761_NRF24L01_INO
+#define	V911S_NRF24L01_INO
+#define	XK_NRF24L01_INO
+#define	YD717_NRF24L01_INO
+#define	ZSX_NRF24L01_INO
 
 //The protocols below need a SX1276 to be installed
 #define FRSKYR9_SX1276_INO
 #define ELRS_SX1276_INO
+
+
 
 /***************************/
 /*** PROTOCOLS SETTINGS  ***/
@@ -261,7 +266,6 @@
 //-------------------------
 //When enabled (remove the "//"), the below setting makes LQI (Link Quality Indicator) available on one of the RX ouput channel (5-14).
 //#define AFHDS2A_LQI_CH 14
-
 
 /**************************/
 /*** FAILSAFE SETTINGS  ***/
@@ -313,6 +317,7 @@
 #define NCC1701_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
 #define PROPEL_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
 #define CABELL_HUB_TELEMETRY		// Use FrSkyD Hub format to send telemetry to TX
+#define RLINK_HUB_TELEMETRY			// Use FrSkyD Hub format to send telemetry to TX
 #define HITEC_HUB_TELEMETRY			// Use FrSkyD Hub format to send basic telemetry to the radios which can decode it like er9x, erskyTX and OpenTX
 #define HITEC_FW_TELEMETRY			// Forward received telemetry packets to be decoded by erskyTX and OpenTX
 #define SCANNER_TELEMETRY			// Forward spectrum scanner data to TX
@@ -507,6 +512,8 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 		PPM_IBUS
 		PWM_SBUS
 		PPM_SBUS
+		PWM_IB16
+		PPM_IB16
 	PROTO_AFHDS2A_RX
 		NONE
 	PROTO_ASSAN
@@ -593,6 +600,10 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 		R9_868
 		R9_915_8CH
 		R9_868_8CH
+		R9_FCC
+		R9_EU
+		R9_FCC_8CH
+		R9_EU_8CH
 	PROTO_FRSKYV
 		NONE
 	PROTO_FRSKYX
@@ -600,7 +611,8 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 		CH_8
 		EU_16
 		EU_8
-		XCLONE
+		XCLONE_16
+		XCLONE_8
 	PROTO_FRSKYX2
 		CH_16
 		CH_8
@@ -653,6 +665,8 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 	PROTO_KN
 		WLTOYS
 		FEILUN
+	PROTO_KYOSHO
+		NONE
 	PROTO_MJXQ
 		WLH08
 		X600
@@ -690,6 +704,8 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 	PROTO_REDPINE
 		RED_FAST
 		RED_SLOW
+	PROTO_RLINK
+		NONE
 	PROTO_SCANNER
 		NONE
 	PROTO_SFHSS
@@ -714,8 +730,10 @@ const PPM_Parameters PPM_prot[14*NBR_BANKS]=	{
 	PROTO_V2X2
 		V2X2
 		JXD506
+		V2X2_MR101
 	PROTO_V761
-		NONE
+		V761_3CH
+		V761_4CH
 	PROTO_V911S
 		V911S_STD
 		V911S_E119
