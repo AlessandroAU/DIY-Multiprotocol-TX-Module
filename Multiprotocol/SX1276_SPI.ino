@@ -272,7 +272,7 @@ void SX1276_WritePayloadToFifo(uint8_t* payload, uint8_t length)
 
 void SX1276_ClearIRQFlags()
 {
-    SX1276_WriteReg(SX1276_12_IRQFLAGS, 0b11111111);
+    SX1276_WriteReg(SX1276_12_REGIRQFLAGS, 0b11111111);
 }
 
 #endif
