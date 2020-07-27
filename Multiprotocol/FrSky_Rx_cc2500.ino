@@ -201,9 +201,10 @@ static uint8_t __attribute__((unused)) frskyx_rx_check_crc_id(bool bind,bool ini
 		{//Save TXID
 			rx_tx_addr[3] = packet[3];
 			rx_tx_addr[2] = packet[4];
+			rx_tx_addr[1] = packet[17];
 		}
 		else
-			if(rx_tx_addr[3] != packet[offset] || rx_tx_addr[2] != packet[offset+1])
+			if(rx_tx_addr[3] != packet[offset] || rx_tx_addr[2] != packet[offset+1] || rx_tx_addr[1] != packet[bind?17:5])
 				return false;							// Bad address
 		return true;									// Full match
 	}
@@ -378,8 +379,6 @@ uint16_t initFrSky_Rx()
 
 uint16_t FrSky_Rx_callback()
 {
-	static uint32_t pps_timer=0;
-	static uint8_t pps_counter=0;
 	static int8_t read_retry = 0;
 	static int8_t tune_low, tune_high;
 	uint8_t len, ch;

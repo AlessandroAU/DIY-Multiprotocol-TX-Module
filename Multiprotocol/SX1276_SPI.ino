@@ -1,6 +1,8 @@
 #ifdef SX1276_INSTALLED
 #include "iface_sx1276.h"
 
+bool SX1276_Mode_LoRa=false;
+
 void SX1276_WriteReg(uint8_t address, uint8_t data)
 {
 	SPI_CSN_off;
@@ -14,9 +16,8 @@ uint8_t SX1276_ReadReg(uint8_t address)
 { 
 	SPI_CSN_off;
 	SPI_Write(address & 0x7F);
-	uint8_t result = SPI_Read();  
+	uint8_t result = SPI_Read();
 	SPI_CSN_on;
-
 	return result;
 }
 
@@ -31,6 +32,17 @@ void SX1276_WriteRegisterMulti(uint8_t address, const uint8_t* data, uint8_t len
 	SPI_CSN_on;
 }
 
+void SX1276_ReadRegisterMulti(uint8_t address, uint8_t* data, uint8_t length)
+{ 
+	SPI_CSN_off;
+	SPI_Write(address & 0x7F);
+
+	for(uint8_t i = 0; i < length; i++)
+		data[i]=SPI_Read();
+
+	SPI_CSN_on;
+}
+
 uint8_t SX1276_Reset()
 {
 	//TODO when pin is not wired
@@ -40,6 +52,39 @@ uint8_t SX1276_Reset()
 		SX1276_RST_on;
 	#endif
     return 0;
+}
+
+bool SX1276_DetectChip() //to be called after reset, verfies the chip has been detected
+{
+	#define SX1276_Detect_MaxAttempts 5
+	uint8_t i = 0;
+	bool chipFound = false;
+	while ((i < SX1276_Detect_MaxAttempts) && !chipFound)
+	{
+		uint8_t ChipVersion = SX1276_ReadReg(SX1276_42_VERSION);
+		if (ChipVersion == 0x12)
+		{
+			debugln("SX1276 reg version=%d", ChipVersion);
+			chipFound = true;
+		}
+		else
+		{
+			debug("SX1276 not found! attempts: %d", i);
+			debug(" of ");
+			debugln("%d SX1276 reg version=%d", SX1276_Detect_MaxAttempts, ChipVersion);
+			i++;
+		}
+	}
+	if (!chipFound)
+	{
+		debugln("SX1276 not detected!!!");
+		return false;
+	}
+	else
+	{
+		debugln("Found SX1276 Device!");
+		return true;
+	}
 }
 
 void SX1276_SetTxRxMode(uint8_t mode)
@@ -66,6 +111,8 @@ void SX1276_SetFrequency(uint32_t frequency)
 void SX1276_SetMode(bool lora, bool low_freq_mode, uint8_t mode)
 {
 	uint8_t data = 0x00;
+
+	SX1276_Mode_LoRa=lora;
 
 	if(lora)
 	{
@@ -104,15 +151,13 @@ void SX1276_ConfigModem1(uint8_t bandwidth, uint8_t coding_rate, bool implicit_h
 
 	SX1276_WriteReg(SX1276_1D_MODEMCONFIG1, data);
 
-  if (bandwidth == SX1276_MODEM_CONFIG1_BW_500KHZ) //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
-  {
-    SX1276_WriteReg(0x36, 0x02);
-    SX1276_WriteReg(0x3a, 0x64);
-  }
-  else
-  {
-    SX1276_WriteReg(0x36, 0x03);
-  }
+	if (bandwidth == SX1276_MODEM_CONFIG1_BW_500KHZ) //datasheet errata reconmendation http://caxapa.ru/thumbs/972894/SX1276_77_8_ErrataNote_1.1_STD.pdf
+	{
+		SX1276_WriteReg(SX1276_36_LORA_REGHIGHBWOPTIMIZE1, 0x02);
+		SX1276_WriteReg(SX1276_3A_LORA_REGHIGHBWOPTIMIZE2, 0x64);
+	}
+	else
+		SX1276_WriteReg(SX1276_36_LORA_REGHIGHBWOPTIMIZE1, 0x03);
 }
 
 void SX1276_ConfigModem2(uint8_t spreading_factor, bool tx_continuous_mode, bool rx_payload_crc_on)

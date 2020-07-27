@@ -1,39 +1,100 @@
 #if defined(FRSKYR9_SX1276_INO)
 #include "iface_sx1276.h"
 
-#define FREQ_MAP_SIZE	29
+#define DISP_FREQ_TABLE
 
-uint8_t FrSkyR9_step = 1;
-uint32_t FrSkyR9_freq_map[FREQ_MAP_SIZE];
+#define FLEX_FREQ	29
+#define FCC_FREQ	43
+#define EU_FREQ		19
+
+enum {
+	FRSKYR9_FREQ=0,
+	FRSKYR9_DATA,
+	FRSKYR9_RX1,
+	FRSKYR9_RX2,
+};
+
+void FrSkyR9_set_frequency()
+{
+	uint8_t data[3];
+	uint16_t num=0;
+	hopping_frequency_no += FrSkyX_chanskip;
+	switch(sub_protocol & 0xFD)
+	{
+		case R9_868:
+			if(IS_BIND_DONE)							// if bind is in progress use R9_915 instead
+			{
+				hopping_frequency_no %= FLEX_FREQ;
+				num=hopping_frequency_no;
+				if(hopping_frequency_no>=FLEX_FREQ-2)
+					num+=FrSkyX_chanskip-FLEX_FREQ+2;	// the last 2 values are FrSkyX_chanskip and FrSkyX_chanskip+1
+				num <<= 5;
+				num += 0xD700;
+				break;
+			}//else use R9_915
+		case R9_915:
+			hopping_frequency_no %= FLEX_FREQ;
+			num=hopping_frequency_no;
+			if(hopping_frequency_no>=FLEX_FREQ-2)
+				num+=FrSkyX_chanskip-FLEX_FREQ+2;		// the last 2 values are FrSkyX_chanskip and FrSkyX_chanskip+1
+			num <<= 5;
+			num += 0xE4C0;
+			break;
+		case R9_FCC:
+			hopping_frequency_no %= FCC_FREQ;
+			num=hopping_frequency_no;
+			num <<= 5;
+			num += 0xE200;
+			break;
+		case R9_EU:
+			hopping_frequency_no %= EU_FREQ;
+			num=hopping_frequency_no;
+			num <<= 4;
+			num += 0xD7D0;
+			break;
+	}
+	data[0] = num>>8;
+	data[1] = num&0xFF;
+	data[2] = 0x00;
+
+	#ifdef DISP_FREQ_TABLE
+		if(phase==0xFF)
+			debugln("F%d=%02X%02X%02X=%lu", hopping_frequency_no, data[0], data[1], data[2], (uint32_t)((data[0]<<16)+(data[1]<<8)+data[2])*61);
+	#endif
+	SX1276_WriteRegisterMulti(SX1276_06_FRFMSB, data, 3);
+}
 
 static void __attribute__((unused)) FrSkyR9_build_packet()
 {
-	//Header
-	packet[0] = 0x3C; 					// unknown but constant
-
 	//ID
-	packet[1] = rx_tx_addr[3];
-	packet[2] = rx_tx_addr[2];
+	packet[0] = rx_tx_addr[1];
+	packet[1] = rx_tx_addr[2];
+	packet[2] = rx_tx_addr[3];
 
 	//Hopping
 	packet[3] = hopping_frequency_no;	// current channel index
-	packet[4] = FrSkyR9_step;			// step size and last 2 channels start index
+	packet[4] = FrSkyX_chanskip;		// step size and last 2 channels start index
 
 	//RX number
 	packet[5] = RX_num;					// receiver number from OpenTX
 
-	// Set packet[6]=failsafe, packet[7]=0?? and packet[8..19]=channels data
-	FrSkyX_channels(6);
+	//Channels
+	FrSkyX_channels(6);					// Set packet[6]=failsafe, packet[7]=0?? and packet[8..19]=channels data
 
 	//Bind
 	if(IS_BIND_IN_PROGRESS)
-		packet[6] = 0x41; 
+	{// 915 0x01=CH1-8_TELEM_ON 0x41=CH1-8_TELEM_OFF 0xC1=CH9-16_TELEM_OFF 0x81=CH9-16_TELEM_ON
+		packet[6] = 0x01;				// bind indicator
+		if(sub_protocol & 1)
+			packet[6] |= 0x20;			// 868
+		if(binding_idx&0x01)
+			packet[6] |= 0x40;			// telem OFF
+		if(binding_idx&0x02)
+			packet[6] |= 0x80;			// ch9-16
+	}
 
-	//SPort
-	packet[20] = 0x08;					//FrSkyX_TX_Seq=8 at startup
-	packet[21] = 0x00;					// length?
-	packet[22] = 0x00;					// data1?
-	packet[23] = 0x00;					// data2?
+	//Sequence and send SPort
+	FrSkyX_seq_sport(20,23);			//20=RX|TXseq, 21=bytes count, 22&23=data
 
 	//CRC
 	uint16_t crc = FrSkyX_crc(packet, 24);
@@ -43,34 +104,27 @@ static void __attribute__((unused)) FrSkyR9_build_packet()
 
 uint16_t initFrSkyR9()
 {
+	//Check frequencies
+	#ifdef DISP_FREQ_TABLE
+		phase=0xFF;
+		FrSkyX_chanskip=1;
+		hopping_frequency_no=0xFF;
+		for(uint8_t i=0;i<FCC_FREQ;i++)
+			FrSkyR9_set_frequency();
+	#endif
+
+	//Reset ID
 	set_rx_tx_addr(MProtocol_id_master);
 
-	//FrSkyR9_step
-	FrSkyR9_step = 1 + (random(0xfefefefe) % 24);
-	debugln("Step=%d", FrSkyR9_step);
+	//FrSkyX_chanskip
+	FrSkyX_chanskip = 1 + (random(0xfefefefe) % 24);
+	debugln("chanskip=%d", FrSkyX_chanskip);
 	
-	//Frequency table
-	uint32_t start_freq=914472960;		//915
-	if(sub_protocol & 0x01)
-		start_freq=859504640;			//868
-	for(uint8_t i=0;i<FREQ_MAP_SIZE-2;i++)
-	{
-		FrSkyR9_freq_map[i]=start_freq;
-		debugln("F%d=%lu", i, FrSkyR9_freq_map[i]);
-		start_freq+=0x7A000;
-	}
-    // Last two frequencies determined by FrSkyR9_step
-	FrSkyR9_freq_map[FREQ_MAP_SIZE-2] = FrSkyR9_freq_map[FrSkyR9_step];
-	debugln("F%d=%lu", FREQ_MAP_SIZE-2, FrSkyR9_freq_map[FREQ_MAP_SIZE-2]);
-	FrSkyR9_freq_map[FREQ_MAP_SIZE-1] = FrSkyR9_freq_map[FrSkyR9_step+1];
-	debugln("F%d=%lu", FREQ_MAP_SIZE-1, FrSkyR9_freq_map[FREQ_MAP_SIZE-1]);
-	hopping_frequency_no = 0;
-
 	//Set FrSkyFormat
 	if((sub_protocol & 0x02) == 0)
-		FrSkyFormat=0;					// 16 channels
+		FrSkyFormat=0;											// 16 channels
 	else
-		FrSkyFormat=1;					// 8 channels
+		FrSkyFormat=1;											// 8 channels
 	debugln("%dCH", FrSkyFormat&1 ? 8:16);
 	
 	//SX1276 Init
@@ -89,56 +143,100 @@ uint16_t initFrSkyR9()
 	SX1276_SetPreambleLength(9);
 	SX1276_SetDetectionThreshold(SX1276_MODEM_DETECTION_THRESHOLD_SF6);
 	SX1276_SetLna(1, true);
-	SX1276_SetHopPeriod(0);				// 0 = disabled, we hop frequencies manually
+	SX1276_SetHopPeriod(0);										// 0 = disabled, we hop frequencies manually
 	SX1276_SetPaDac(true);
-	SX1276_SetTxRxMode(TX_EN);			// Set RF switch to TX
+	SX1276_SetTxRxMode(TX_EN);									// Set RF switch to TX
 
-	return 20000;						// start calling FrSkyR9_callback in 20 milliseconds
+	FrSkyX_telem_init();
+	
+	hopping_frequency_no=0;
+	phase=FRSKYR9_FREQ;
+	return 20000;												// Start calling FrSkyR9_callback in 20 milliseconds
 }
 
 uint16_t FrSkyR9_callback()
 {
-	//Force standby
-	SX1276_SetMode(true, false, SX1276_OPMODE_STDBY);
-
-	//SX1276_WriteReg(SX1276_11_IRQFLAGSMASK, 0xbf); // use only RxDone interrupt
-
-	// uint8_t buffer[2];
-	// buffer[0] = 0x00;
-	// buffer[1] = 0x00;
-	// SX1276_WriteRegisterMulti(SX1276_40_DIOMAPPING1, buffer, 2); // RxDone interrupt mapped to DIO0 (the rest are not used because of the REG_IRQ_FLAGS_MASK)
-
-	// SX1276_WriteReg(REG_PAYLOAD_LENGTH, 13);
-
-	// SX1276_WriteReg(REG_FIFO_ADDR_PTR, 0x00);
-
-	// SX1276_WriteReg(SX1276_01_OPMODE, 0x85); // RXCONTINUOUS
-	// delay(10); // 10 ms
-
-	// SX1276_WriteReg(SX1276_01_OPMODE, 0x81); // STDBY
-
-	// SX1276_WriteReg(SX1276_09_PACONFIG, 0xF0);
-
-	//Set power
-	// max power: 15dBm (10.8 + 0.6 * MaxPower [dBm])
-	// output_power: 2 dBm (17-(15-OutputPower) (if pa_boost_pin == true))
-	SX1276_SetPaConfig(true, 7, 0);
-	
-	//Set frequency
-	hopping_frequency_no = (hopping_frequency_no + FrSkyR9_step) % FREQ_MAP_SIZE;
-	SX1276_SetFrequency(FrSkyR9_freq_map[hopping_frequency_no]); // set current center frequency
-	delayMicroseconds(500);		//Frequency settle time
-
-	//Build packet
-	FrSkyR9_build_packet();
-	
-	//Send
-	SX1276_WritePayloadToFifo(packet, 26);
-	SX1276_SetMode(true, false, SX1276_OPMODE_TX);
-
-	// need to clear RegIrqFlags?
-
-    return 20000;
+	switch (phase)
+	{
+		case FRSKYR9_FREQ:
+			//Force standby
+			SX1276_SetMode(true, false, SX1276_OPMODE_STDBY);
+			//Set frequency
+			FrSkyR9_set_frequency(); 							// Set current center frequency
+			//Set power
+			// max power: 15dBm (10.8 + 0.6 * MaxPower [dBm])
+			// output_power: 2 dBm (17-(15-OutputPower) (if pa_boost_pin == true))
+			SX1276_SetPaConfig(true, 7, 0);						// Lowest power for the T18
+			//Build packet
+			FrSkyR9_build_packet();
+			phase++;
+			return 460;											// Frequency settle time
+		case FRSKYR9_DATA:
+			//Set RF switch to TX
+			SX1276_SetTxRxMode(TX_EN);
+			//Send packet
+			SX1276_WritePayloadToFifo(packet, 26);
+			SX1276_SetMode(true, false, SX1276_OPMODE_TX);
+#if not defined TELEMETRY
+			phase=FRSKYR9_FREQ;
+			return 20000-460;
+#else
+			phase++;
+			return 11140;										// Packet send time
+		case FRSKYR9_RX1:
+			//Force standby
+			SX1276_SetMode(true, false, SX1276_OPMODE_STDBY);
+			//RX packet size is 13
+			SX1276_WriteReg(SX1276_22_PAYLOAD_LENGTH, 13);
+			//Reset pointer
+			SX1276_WriteReg(SX1276_0D_FIFOADDRPTR, 0x00);
+			//Set RF switch to RX
+			SX1276_SetTxRxMode(RX_EN);
+			//Switch to RX
+			SX1276_WriteReg(SX1276_01_OPMODE, 0x85);
+			phase++;
+			return 7400;
+		case FRSKYR9_RX2:
+			if( (SX1276_ReadReg(SX1276_12_REGIRQFLAGS)&0xF0) == (_BV(SX1276_REGIRQFLAGS_RXDONE) | _BV(SX1276_REGIRQFLAGS_VALIDHEADER)) )
+			{
+				if(SX1276_ReadReg(SX1276_13_REGRXNBBYTES)==13)
+				{
+					SX1276_ReadRegisterMulti(SX1276_00_FIFO,packet_in,13);
+					if( packet_in[9]==rx_tx_addr[1] && packet_in[10]==rx_tx_addr[2] && FrSkyX_crc(packet_in, 11, rx_tx_addr[1]+(rx_tx_addr[2]<<8))==(packet_in[11]+(packet_in[12]<<8)) )
+					{
+						if(packet_in[0]&0x80)
+							RX_RSSI=packet_in[0]<<1;
+						else
+							v_lipo1=(packet_in[0]<<1)+1;
+						//TX_LQI=~(SX1276_ReadReg(SX1276_19_PACKETSNR)>>2)+1;
+						TX_RSSI=SX1276_ReadReg(SX1276_1A_PACKETRSSI)-157;
+						for(uint8_t i=0;i<9;i++)
+							packet[4+i]=packet_in[i];			// Adjust buffer to match FrSkyX
+						frsky_process_telemetry(packet,len);	// Process telemetry packet
+						pps_counter++;
+						if(TX_LQI==0)
+							TX_LQI++;							// Recover telemetry right away
+					}
+				}
+			}
+			if (millis() - pps_timer >= 1000)
+			{//1 packet every 20ms
+				pps_timer = millis();
+				debugln("%d pps", pps_counter);
+				TX_LQI = pps_counter<<1;						// Max=100%
+				pps_counter = 0;
+			}
+			if(TX_LQI==0)
+				FrSkyX_telem_init();							// Reset telemetry
+			else
+				telemetry_link=1;								// Send telemetry out anyway
+			//Clear all flags
+			SX1276_WriteReg(SX1276_12_REGIRQFLAGS,0xFF);
+			phase=FRSKYR9_FREQ;
+			break;
+#endif
+	}
+	return 1000;
 }
 
 #endif

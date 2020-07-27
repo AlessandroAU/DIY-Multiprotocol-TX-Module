@@ -19,7 +19,7 @@
 #define VERSION_MAJOR		1
 #define VERSION_MINOR		3
 #define VERSION_REVISION	1
-#define VERSION_PATCH_LEVEL	19
+#define VERSION_PATCH_LEVEL	45
 
 //******************
 // Protocols
@@ -99,7 +99,10 @@ enum PROTOCOLS
 	PROTO_DSM_RX	= 70,	// =>CYRF6936
 	PROTO_JJRC345	= 71,	// =>NRF24L01
 	PROTO_Q90C		= 72,	// =>NRF24L01 or CC2500
+	PROTO_KYOSHO	= 73,	// =>A7105
+	PROTO_RLINK		= 74,	// =>CC2500
 
+	PROTO_FAKE		= 126,	// =>CC2500+NRF24L01
 	PROTO_TEST		= 127,	// =>CC2500
 };
 
@@ -127,6 +130,8 @@ enum AFHDS2A
 	PPM_IBUS = 1,
 	PWM_SBUS = 2,
 	PPM_SBUS = 3,
+	PWM_IB16 = 4,
+	PPM_IB16 = 5,
 };
 enum Hisky
 {
@@ -224,11 +229,12 @@ enum FRSKYD
 };
 enum FRSKYX
 {
-	CH_16	= 0,
-	CH_8	= 1,
-	EU_16	= 2,
-	EU_8	= 3,
-	XCLONE	= 4,
+	CH_16		= 0,
+	CH_8		= 1,
+	EU_16		= 2,
+	EU_8		= 3,
+	XCLONE_16	= 4,
+	XCLONE_8	= 5,
 };
 enum HONTAI
 {
@@ -241,6 +247,7 @@ enum V2X2
 {
 	V2X2	= 0,
 	JXD506	= 1,
+	V2X2_MR101 = 2,
 };
 enum FY326
 {
@@ -342,6 +349,10 @@ enum FRSKY_R9
 	R9_868		= 1,
 	R9_915_8CH	= 2,
 	R9_868_8CH	= 3,
+	R9_FCC		= 4,
+	R9_EU		= 5,
+	R9_FCC_8CH	= 6,
+	R9_EU_8CH	= 7,
 };
 enum ESKY
 {
@@ -371,6 +382,12 @@ enum PELIKAN
 {
 	PELIKAN_PRO	= 0,
 	PELIKAN_LITE= 1,
+};
+
+enum V761
+{
+	V761_3CH	= 0,
+	V761_4CH	= 1,
 };
 
 #define NONE 		0
@@ -784,6 +801,8 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 				DSM_RX		70
 				JJRC345		71
 				Q90C		72
+				KYOSHO		73
+				RLINK		74
    BindBit=>		0x80	1=Bind/0=No
    AutoBindBit=>	0x40	1=Yes /0=No
    RangeCheck=>		0x20	1=Yes /0=No
@@ -881,9 +900,12 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 			PPM_IBUS	1
 			PWM_SBUS	2
 			PPM_SBUS	3
+			PWM_IB16	4
+			PPM_IB16	5
 		sub_protocol==V2X2
 			V2X2		0
 			JXD506		1
+			V2X2_MR101 2
 		sub_protocol==FY326
 			FY326		0
 			FY319		1
@@ -949,6 +971,10 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 			R9_868		1
 			R9_915_8CH	2
 			R9_868_8CH	3
+			R9_FCC		4
+			R9_EU		5
+			R9_FCC_8CH	6
+			R9_EU_8CH	7
 		sub_protocol==ESKY
 			ESKY_STD	0
 			ESKY_ET4	1
@@ -964,6 +990,9 @@ Serial: 100000 Baud 8e2      _ xxxx xxxx p --
 		sub_protocol==PELIKAN
 			PELIKAN_PRO		0
 			PELIKAN_LITE	1
+		sub_protocol==V761
+			V761_3CH	0
+			V761_4CH	1
 
    Power value => 0x80	0=High/1=Low
   Stream[3]   = option_protocol;
